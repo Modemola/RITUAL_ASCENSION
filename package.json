@@ -1,0 +1,27 @@
+{
+  "name": "ritual-ascension",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "frontend/*",
+    "backend/*",
+    "shared/*",
+    "blockchain/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w frontend/web",
+    "dev:frontend": "npm run dev -w frontend/web",
+    "dev:backend": "npm run dev -w backend/api",
+    "build": "npm run build -w shared/domain && npm run build -w backend/api && npm run build -w frontend/web",
+    "build:contracts": "npm run build -w blockchain/contracts",
+    "typecheck": "npm run typecheck -w shared/domain && npm run typecheck -w backend/api && npm run typecheck -w frontend/web",
+    "lint": "npm run lint -w frontend/web"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
