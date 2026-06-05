@@ -20,12 +20,12 @@ export default function LandingPage() {
     <main>
       <section className="relative overflow-hidden border-b border-cyan/15">
         <div className="mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_0.92fr] lg:items-center">
-          <div className="space-y-7">
-            <div className="inline-flex items-center gap-2 border border-cyan/20 bg-cyan/5 px-3 py-2 font-mono text-xs text-cyan shadow-rune">
+          <div className="space-y-7 fade-in">
+            <div className="inline-flex items-center gap-2 border border-cyan/20 bg-cyan/5 px-3 py-2 font-mono text-xs text-cyan shadow-rune fade-in-delay-1">
               <Sparkles className="size-4" />
               ASCENSION RITUAL ONLINE
             </div>
-            <div className="space-y-5">
+            <div className="space-y-5 slide-up-delay">
               <h1 className="max-w-4xl text-5xl font-semibold leading-[0.98] tracking-normal text-ink sm:text-6xl lg:text-7xl">
                 Mint Your Soulbound Identity.
               </h1>
@@ -33,18 +33,18 @@ export default function LandingPage() {
                 Ritual Ascension turns a wallet into a living builder passport: class, quests, XP, achievements, evolution, Oracle mentorship, and public reputation.
               </p>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link href="/onboarding" className="rune-button inline-flex items-center justify-center gap-2 px-5 py-3 font-semibold">
+            <div className="flex flex-col gap-3 sm:flex-row fade-in-delay-3">
+              <Link href="/onboarding" className="rune-button inline-flex items-center justify-center gap-2 px-5 py-3 font-semibold hover-lift">
                 <Wallet className="size-4" />
                 Mint Your Passport
               </Link>
-              <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 border border-cyan/20 bg-panel/70 px-5 py-3 font-semibold text-cyan hover:border-cyan/50">
+              <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 border border-cyan/20 bg-panel/70 px-5 py-3 font-semibold text-cyan hover:border-cyan/50 hover-lift">
                 Enter Demo Temple <ArrowRight className="size-4" />
               </Link>
             </div>
           </div>
 
-          <div className="passport-art pulse-rune relative min-h-[520px] border border-cyan/25 p-4 shadow-rune">
+          <div className="passport-art pulse-rune relative min-h-[520px] border border-cyan/25 p-4 shadow-rune scale-in">
             <div className="flex h-full flex-col justify-between border border-white/15 bg-black/35 p-5 backdrop-blur">
               <div className="flex items-start justify-between">
                 <div>
@@ -81,8 +81,8 @@ export default function LandingPage() {
 
       <section className="border-b border-cyan/15 py-14">
         <div className="mx-auto grid max-w-7xl gap-4 px-4 sm:px-6 md:grid-cols-4">
-          {features.map((item) => (
-            <article key={item.title} className="rune-panel p-5 hover:border-cyan/45">
+          {features.map((item, i) => (
+            <article key={item.title} className="rune-panel p-5 hover:border-cyan/45 scale-in-stagger hover-lift" style={{ "--index": i } as React.CSSProperties}>
               <item.icon className="size-6 text-cyan" />
               <h2 className="mt-5 text-lg font-semibold">{item.title}</h2>
               <p className="mt-2 text-sm leading-6 text-muted">{item.text}</p>

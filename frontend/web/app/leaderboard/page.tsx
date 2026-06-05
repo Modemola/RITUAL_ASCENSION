@@ -5,14 +5,16 @@ export default function LeaderboardPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Leaderboard</p>
-      <h1 className="mt-2 text-4xl font-semibold">Top Ritual builders.</h1>
+      <div className="fade-in">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Leaderboard</p>
+        <h1 className="mt-2 text-4xl font-semibold">Top Ritual builders.</h1>
+      </div>
       <section className="mt-7 grid items-end gap-4 md:grid-cols-3">
         {topThree.map((builder, index) => (
-          <article key={builder.wallet} className={index === 0 ? "passport-art min-h-72 border border-gold/40 p-4 shadow-rune md:-mt-6" : "passport-art min-h-60 border border-cyan/25 p-4"}>
+          <article key={builder.wallet} className={index === 0 ? "passport-art min-h-72 border border-gold/40 p-4 shadow-rune md:-mt-6 scale-in-stagger hover-lift hover-glow" : "passport-art min-h-60 border border-cyan/25 p-4 scale-in-stagger hover-lift hover-glow"} style={{ "--index": index } as React.CSSProperties}>
             <div className="flex h-full flex-col justify-between border border-white/15 bg-black/35 p-4">
-              <p className="font-mono text-4xl text-cyan">#{index + 1}</p>
-              <div>
+              <p className="font-mono text-4xl text-cyan pop-in">#{index + 1}</p>
+              <div className="ascend">
                 <p className="font-mono text-sm">{builder.wallet}</p>
                 <p className="text-sm text-white/65">{builder.className} · Level {builder.level}</p>
                 <p className="mt-3 font-mono text-3xl text-green">{builder.reputation} REP</p>
@@ -21,10 +23,10 @@ export default function LeaderboardPage() {
           </article>
         ))}
       </section>
-      <section className="mt-6 overflow-hidden border border-cyan/15 bg-panel/70">
+      <section className="mt-6 overflow-hidden border border-cyan/15 bg-panel/70 fade-in-delay-1">
         {leaderboard.map((builder, index) => (
-          <div key={builder.wallet} className="grid grid-cols-[56px_1fr_80px_90px] items-center gap-3 border-b border-cyan/10 p-4 last:border-b-0">
-            <span className="font-mono text-xl text-cyan">{index + 1}</span>
+          <div key={builder.wallet} className="grid grid-cols-[56px_1fr_80px_90px] items-center gap-3 border-b border-cyan/10 p-4 last:border-b-0 float-message hover-lift" style={{ animationDelay: `${index * 30}ms` }}>
+            <span className="font-mono text-xl text-cyan">#{index + 1}</span>
             <div>
               <p className="font-mono text-sm">{builder.wallet}</p>
               <p className="text-sm text-muted">{builder.className}</p>

@@ -71,7 +71,9 @@ textarea {
   background: linear-gradient(90deg, transparent, rgba(0, 245, 212, 0.85), transparent);
 }
 
+/* ===== ANIMATION UTILITIES ===== */
 @media (prefers-reduced-motion: no-preference) {
+  /* Existing animations */
   .pulse-rune {
     animation: pulse-rune 2.8s ease-in-out infinite;
   }
@@ -79,8 +81,191 @@ textarea {
   .float-rune {
     animation: float-rune 7s ease-in-out infinite;
   }
+
+  /* Page & Section Reveals */
+  .fade-in {
+    animation: fade-in 600ms ease-out forwards;
+  }
+
+  .fade-in-delay-1 {
+    animation: fade-in 600ms ease-out 100ms forwards;
+    opacity: 0;
+  }
+
+  .fade-in-delay-2 {
+    animation: fade-in 600ms ease-out 200ms forwards;
+    opacity: 0;
+  }
+
+  .fade-in-delay-3 {
+    animation: fade-in 600ms ease-out 300ms forwards;
+    opacity: 0;
+  }
+
+  .slide-up {
+    animation: slide-up 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .slide-up-delay {
+    animation: slide-up 500ms cubic-bezier(0.34, 1.56, 0.64, 1) 150ms forwards;
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  /* Card & Element Reveals */
+  .scale-in {
+    animation: scale-in 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .scale-in-stagger {
+    animation: scale-in 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .scale-in-stagger:nth-child(2) {
+    animation-delay: 100ms;
+  }
+
+  .scale-in-stagger:nth-child(3) {
+    animation-delay: 200ms;
+  }
+
+  .scale-in-stagger:nth-child(4) {
+    animation-delay: 300ms;
+  }
+
+  .scale-in-stagger:nth-child(n + 5) {
+    animation-delay: calc((var(--index, 0) - 4) * 100ms);
+  }
+
+  /* Glow & Shimmer Effects */
+  .glow-pulse {
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  .shimmer {
+    animation: shimmer 2s infinite;
+  }
+
+  .shimmer-slow {
+    animation: shimmer 3s infinite;
+  }
+
+  /* Progress & Ascension */
+  .ascend {
+    animation: ascend 800ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .progress-fill {
+    animation: progress-fill 1.2s ease-out forwards;
+  }
+
+  /* Oracle & Mystical */
+  .oracle-pulse {
+    animation: oracle-pulse 2.4s ease-in-out infinite;
+  }
+
+  .oracle-glow {
+    animation: oracle-glow 3s ease-in-out infinite;
+  }
+
+  .float-message {
+    animation: float-message 0.6s ease-out forwards;
+  }
+
+  /* Achievement Unlock */
+  .unlock-celebration {
+    animation: unlock-celebration 600ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .pop-in {
+    animation: pop-in 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* Forms & Interactions */
+  .input-focus {
+    animation: input-glow 300ms ease-out forwards;
+  }
+
+  .button-press {
+    animation: button-press 200ms ease-out forwards;
+  }
+
+  /* Loading States */
+  .skeleton-wave {
+    animation: skeleton-wave 2s infinite;
+  }
+
+  .pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+
+  /* Hover & Interactive */
+  .hover-lift {
+    transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 300ms ease-out;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+  }
+
+  .hover-glow {
+    transition: box-shadow 300ms ease-out;
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 28px rgba(0, 245, 212, 0.4);
+  }
 }
 
+/* ===== KEYFRAME DEFINITIONS ===== */
+
+/* Fade & Opacity */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Slide & Position */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale & Size */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Glow & Light Effects */
 @keyframes pulse-rune {
   0%,
   100% {
@@ -91,6 +276,28 @@ textarea {
   }
 }
 
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(0, 245, 212, 0.25),
+      inset 0 0 20px rgba(0, 245, 212, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(0, 245, 212, 0.45),
+      inset 0 0 20px rgba(0, 245, 212, 0.1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Float & Motion */
 @keyframes float-rune {
   0%,
   100% {
@@ -98,5 +305,134 @@ textarea {
   }
   50% {
     transform: translateY(-10px);
+  }
+}
+
+@keyframes float-message {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ascension & Progress */
+@keyframes ascend {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes progress-fill {
+  from {
+    width: 0%;
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Oracle Mystical */
+@keyframes oracle-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.3),
+      inset 0 0 15px rgba(168, 85, 247, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(168, 85, 247, 0.5),
+      inset 0 0 20px rgba(168, 85, 247, 0.15);
+  }
+}
+
+@keyframes oracle-glow {
+  0% {
+    text-shadow: 0 0 10px rgba(168, 85, 247, 0);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.6), 0 0 40px rgba(0, 245, 212, 0.3);
+  }
+  100% {
+    text-shadow: 0 0 10px rgba(168, 85, 247, 0);
+  }
+}
+
+/* Achievement Unlock */
+@keyframes unlock-celebration {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotateZ(-8deg);
+  }
+  50% {
+    transform: scale(1.05) rotateZ(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotateZ(0deg);
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotateZ(-12deg);
+  }
+  70% {
+    transform: scale(1.1) rotateZ(4deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotateZ(0deg);
+  }
+}
+
+/* Form & Interaction */
+@keyframes input-glow {
+  from {
+    box-shadow: 0 0 0 2px rgba(0, 245, 212, 0);
+  }
+  to {
+    box-shadow: 0 0 0 2px rgba(0, 245, 212, 0.3), 0 0 12px rgba(0, 245, 212, 0.2);
+  }
+}
+
+@keyframes button-press {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Loading & Skeleton */
+@keyframes skeleton-wave {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes pulse-subtle {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
   }
 }

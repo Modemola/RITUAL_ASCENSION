@@ -3,9 +3,9 @@ import { Bot, Clock, Send, Sparkles } from "lucide-react";
 export default function OraclePage() {
   return (
     <main className="mx-auto grid max-w-7xl gap-5 px-4 py-8 sm:px-6 lg:grid-cols-[330px_1fr]">
-      <aside className="rune-panel p-5">
+      <aside className="rune-panel p-5 fade-in oracle-pulse">
         <div className="flex items-center gap-3">
-          <div className="grid size-12 place-items-center rounded-full border border-purple/35 bg-purple/10 shadow-purple pulse-rune">
+          <div className="grid size-12 place-items-center rounded-full border border-purple/35 bg-purple/10 shadow-purple oracle-pulse">
             <Bot className="size-6 text-purple" />
           </div>
           <div>
@@ -31,31 +31,31 @@ export default function OraclePage() {
           ))}
         </div>
       </aside>
-      <section className="rune-panel flex min-h-[640px] flex-col overflow-hidden">
+      <section className="rune-panel flex min-h-[640px] flex-col overflow-hidden fade-in-delay-1 hover-glow">
         <div className="border-b border-cyan/10 p-4">
           <h2 className="font-semibold">Current thread</h2>
         </div>
         <div className="flex-1 space-y-4 p-4">
-          <div className="max-w-2xl border border-cyan/20 bg-cyan/5 p-4 shadow-rune">
+          <div className="max-w-2xl border border-cyan/20 bg-cyan/5 p-4 shadow-rune float-message hover-glow">
             <div className="mb-2 flex items-center gap-2 text-cyan">
-              <Sparkles className="size-4" />
-              <span className="font-mono text-xs">ORACLE</span>
+              <Sparkles className="size-4 oracle-glow" />
+              <span className="font-mono text-xs oracle-glow">ORACLE</span>
             </div>
             <p className="text-sm leading-6 text-ink">
               Your next highest-leverage move is to finish the LLM precompile quest. It advances your passport toward the Builder stage and teaches the Ritual AI primitive directly.
             </p>
-            <div className="mt-4 border border-cyan/20 bg-black/25 p-3">
+            <div className="mt-4 border border-cyan/20 bg-black/25 p-3 hover-glow">
               <p className="font-semibold text-cyan">Call the Ritual LLM Precompile</p>
               <p className="mt-1 text-sm text-muted">Recommended because it is already in progress and unlocks an evolution trigger.</p>
             </div>
           </div>
-          <div className="ml-auto max-w-2xl border border-purple/25 bg-purple/10 p-4 text-white">
+          <div className="ml-auto max-w-2xl border border-purple/25 bg-purple/10 p-4 text-white float-message" style={{ animationDelay: "200ms" }}>
             <p className="text-sm leading-6">What should I do after deploying my first contract?</p>
           </div>
         </div>
         <form className="flex gap-3 border-t border-cyan/10 p-4">
-          <input className="min-w-0 flex-1 border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50" placeholder="Ask the Oracle..." />
-          <button className="rune-button grid size-11 place-items-center" aria-label="Send message">
+          <input className="min-w-0 flex-1 border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30" placeholder="Ask the Oracle..." />
+          <button className="rune-button grid size-11 place-items-center button-press hover-lift" aria-label="Send message">
             <Send className="size-4" />
           </button>
         </form>

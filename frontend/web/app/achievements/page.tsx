@@ -4,11 +4,13 @@ import { achievements } from "@/lib/data";
 export default function AchievementsPage() {
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Achievement system</p>
-      <h1 className="mt-2 text-4xl font-semibold">Permanent passport badges.</h1>
+      <div className="fade-in">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Achievement system</p>
+        <h1 className="mt-2 text-4xl font-semibold">Permanent passport badges.</h1>
+      </div>
       <section className="mt-6 columns-1 gap-4 sm:columns-2 lg:columns-3">
-        {achievements.map((achievement) => (
-          <article key={achievement.id} className={achievement.unlocked ? "rune-panel mb-4 break-inside-avoid p-5 shadow-rune" : "rune-panel mb-4 break-inside-avoid p-5 opacity-55 grayscale"}>
+        {achievements.map((achievement, i) => (
+          <article key={achievement.id} className={achievement.unlocked ? "rune-panel mb-4 break-inside-avoid p-5 shadow-rune pop-in hover-lift hover-glow" : "rune-panel mb-4 break-inside-avoid p-5 opacity-55 grayscale fade-in-delay-2 hover-lift"} style={{ animationDelay: `${i * 50}ms` }}>
             <div className="flex items-center justify-between">
               {achievement.unlocked ? <Medal className="size-9 text-gold" /> : <Lock className="size-9 text-muted" />}
               <span className="border border-cyan/15 px-2 py-1 font-mono text-xs text-cyan">{achievement.rarity}</span>

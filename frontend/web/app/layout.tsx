@@ -31,18 +31,18 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </Link>
             <nav className="hidden items-center gap-1 md:flex">
               {navItems.map((item) => (
-                <Link key={item.href} href={item.href} className="px-3 py-2 text-sm text-muted hover:text-cyan">
+                <Link key={item.href} href={item.href} className="px-3 py-2 text-sm text-muted hover:text-cyan hover-lift transition-colors">
                   {item.label}
                 </Link>
               ))}
             </nav>
             <div className="flex items-center gap-2">
-              <div className="hidden items-center gap-2 border border-cyan/20 bg-panel/70 px-3 py-2 text-sm lg:flex">
+              <div className="hidden items-center gap-2 border border-cyan/20 bg-panel/70 px-3 py-2 text-sm lg:flex scale-in">
                 <CircleGauge className="size-4 text-cyan" />
                 <span className="font-mono">LVL {appProgress.level}</span>
                 <span className="text-muted">{demoPassport.xp} XP</span>
               </div>
-              <Link href="/onboarding" className="rune-button inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold">
+              <Link href="/onboarding" className="rune-button inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold hover-lift">
                 <Wallet className="size-4" />
                 Connect
               </Link>
@@ -56,8 +56,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </div>
         <div className="relative z-10 min-h-screen pt-[73px] pb-24 md:pb-0">{children}</div>
         <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-cyan/15 bg-void/90 backdrop-blur-xl md:hidden">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 px-2 py-3 text-[11px] text-muted">
+          {navItems.map((item, i) => (
+            <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 px-2 py-3 text-[11px] text-muted hover:text-cyan hover-lift transition-colors float-message" style={{ animationDelay: `${i * 50}ms` }}>
               <item.icon className="size-5 text-cyan" />
               {item.label}
             </Link>
