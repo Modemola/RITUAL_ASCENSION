@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Award, Bot, CircleGauge, LayoutDashboard, ListChecks, Trophy, Wallet } from "lucide-react";
 import { ReactNode } from "react";
 import { appProgress, demoPassport } from "@/lib/data";
+import { RitualProvider } from "@/lib/store";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
+        <RitualProvider>
         <header className="fixed inset-x-0 top-0 z-30 border-b border-cyan/15 bg-void/78 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
             <Link href="/" className="flex items-center gap-3 font-semibold text-ink">
@@ -63,6 +65,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
+        </RitualProvider>
       </body>
     </html>
   );
