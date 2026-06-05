@@ -50,6 +50,57 @@ export interface LeaderboardData {
   builders: LeaderboardEntry[];
 }
 
+export interface QuestData {
+  quest: any;
+}
+
+export interface QuestsData {
+  quests: any[];
+  total: number;
+}
+
+export interface QuestCategoriesData {
+  categories: any[];
+}
+
+export interface TestnetActivityData {
+  activity: {
+    wallet: string;
+    network: "ritual-testnet";
+    completedTasks: number;
+    uniqueContracts: number;
+    transactions: number;
+    activeDays: number;
+    lastIndexedBlock: number;
+  };
+}
+
+export interface DiscordActivityData {
+  activity: {
+    discordId: string;
+    username: string;
+    serverId: string;
+    messages: number;
+    roles: string[];
+    connectedWallet?: string;
+  };
+}
+
+export interface VerificationData {
+  questId: string;
+  proof?: string;
+  verification: {
+    ok: boolean;
+    reason: string;
+    source?: string;
+    value?: number;
+    required?: number;
+    roles?: string[];
+    requiredRole?: string;
+    capped?: boolean;
+  };
+}
+
 // Generic fetch wrapper
 async function apiFetch<T>(
   endpoint: string,
@@ -95,10 +146,19 @@ export const apiClient = {
     apiFetch<ProfileData>(`/api/profile/${wallet}`),
 
   // Get all quests (optional class filter)
-  getQuests: (classId?: number) => {
-    const query = classId ? `?class=${classId}` : "";
-    return apiFetch(`/api/quests${query}`);
+  getQuests: (params?: { classId?: number; category?: string }) => {
+    const search = new URLSearchParams();
+    if (params?.classId) search.set("class", String(params.classId));
+    if (params?.category) search.set("category", params.category);
+    const query = search.toString() ? `?${search}` : "";
+    return apiFetch<QuestsData>(`/api/quests${query}`);
   },
+
+  // Get one quest
+  getQuest: (id: string) => apiFetch<QuestData>(`/api/quests/${id}`),
+
+  // Get quest categories
+  getQuestCategories: () => apiFetch<QuestCategoriesData>(`/api/quest-categories`),
 
   // Get leaderboard
   getLeaderboard: () => apiFetch<LeaderboardData>(`/api/leaderboard`),
@@ -114,6 +174,28 @@ export const apiClient = {
     apiFetch<OracleResponse>(`/api/oracle/chat`, {
       method: "POST",
       body: JSON.stringify({ message, wallet }),
+    }),
+
+  // Ritual testnet-only wallet activity
+  getTestnetActivity: (wallet: string) =>
+    apiFetch<TestnetActivityData>(`/api/testnet/activity?wallet=${encodeURIComponent(wallet)}`),
+
+  // Discord account activity
+  getDiscordActivity: (discordId: string) =>
+    apiFetch<DiscordActivityData>(`/api/discord/activity?discordId=${encodeURIComponent(discordId)}`),
+
+  // Mock Discord connection
+  connectDiscord: (wallet: string, discordId: string, username: string) =>
+    apiFetch<{ discord: DiscordActivityData["activity"] }>(`/api/discord/connect`, {
+      method: "POST",
+      body: JSON.stringify({ wallet, discordId, username }),
+    }),
+
+  // Verify a task
+  verifyQuest: (questId: string, payload: { wallet?: string; discordId?: string; proof?: string }) =>
+    apiFetch<VerificationData>(`/api/quests/${questId}/verify`, {
+      method: "POST",
+      body: JSON.stringify(payload),
     }),
 
   // Health check

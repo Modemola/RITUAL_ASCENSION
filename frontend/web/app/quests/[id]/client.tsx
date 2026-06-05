@@ -1,125 +1,99 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, Share2, Zap } from "lucide-react";
+import { ChevronLeft, MessageCircle, Share2, TestTube2, Wallet, Zap } from "lucide-react";
+import { useMemo, useState } from "react";
+import { apiClient, VerificationData } from "@/lib/api";
+import { quests } from "@/lib/data";
+import { Toast } from "@/lib/components";
+import { useForm } from "@/lib/hooks";
 import { useRitual } from "@/lib/store";
-import { useForm, validators } from "@/lib/hooks";
-import { LoadingSpinner, Toast } from "@/lib/components";
-import { useState } from "react";
 
-interface Quest {
-  id: string;
-  title: string;
-  reward: number;
-  difficulty: "common" | "uncommon" | "rare" | "legendary";
-  category: string;
-  description: string;
-  steps: string[];
-  completedAt?: number;
-}
-
-const questData: Record<string, Quest> = {
-  "1": {
-    id: "1",
-    title: "Deploy your first contract",
-    reward: 250,
-    difficulty: "common",
-    category: "Contracts",
-    description: "Deploy a simple contract to verify your Hardhat setup works.",
-    steps: [
-      "Create a new Hardhat project",
-      "Write a basic contract",
-      "Run deploy script",
-      "Submit transaction hash",
-    ],
-  },
-  "2": {
-    id: "2",
-    title: "Verify a contract on Etherscan",
-    reward: 150,
-    difficulty: "uncommon",
-    category: "Verification",
-    description: "Publish your contract source code for transparency.",
-    steps: [
-      "Get contract address from deployment",
-      "Prepare verification inputs",
-      "Verify with Etherscan API",
-      "Submit verification link",
-    ],
-  },
-  "3": {
-    id: "3",
-    title: "Build a multi-sig wallet",
-    reward: 500,
-    difficulty: "rare",
-    category: "Advanced",
-    description: "Create a contract requiring multiple signatures.",
-    steps: [
-      "Design authorization logic",
-      "Implement proposal system",
-      "Deploy and test",
-      "Submit proof of execution",
-    ],
-  },
+const difficultyColors = {
+  common: "text-gray-400 border-gray-500/30",
+  uncommon: "text-green-400 border-green-500/30",
+  rare: "text-blue-400 border-blue-500/30",
+  epic: "text-purple-400 border-purple-500/30",
+  legendary: "text-gold border-gold/40",
 };
 
 export const QuestDetailClient = ({ questId }: { questId: string }) => {
   const { wallet, isConnected } = useRitual();
-  const [submitted, setSubmitted] = useState(false);
-  const quest = questData[questId] || questData["1"];
+  const [discordId, setDiscordId] = useState("ritual-demo-user");
+  const [discordUsername, setDiscordUsername] = useState("ritual_builder");
+  const [discordConnected, setDiscordConnected] = useState(false);
+  const [verification, setVerification] = useState<VerificationData["verification"] | null>(null);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const quest = useMemo(() => quests.find((item) => item.id === questId) ?? quests[0], [questId]);
 
   const form = useForm(
     { proof: "" },
     async (values) => {
-      // In production, this would call an API endpoint
-      console.log("Submitting proof:", values.proof, "for quest:", questId);
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
+      const response = await apiClient.verifyQuest(quest.id, {
+        wallet: wallet ?? undefined,
+        discordId: discordConnected ? discordId : undefined,
+        proof: values.proof,
+      });
+
+      if (response.error || !response.data) {
+        throw new Error(response.error || "Verification failed");
+      }
+
+      setVerification(response.data.verification);
+      setToast({
+        type: response.data.verification.ok ? "success" : "error",
+        message: response.data.verification.reason,
+      });
     }
   );
 
-  const difficultyColors: Record<Quest["difficulty"], string> = {
-    common: "text-gray-400 border-gray-500/30",
-    uncommon: "text-green-400 border-green-500/30",
-    rare: "text-blue-400 border-blue-500/30",
-    legendary: "text-purple-400 border-purple-500/30",
+  const handleDiscordConnect = async () => {
+    const response = await apiClient.connectDiscord(wallet ?? "", discordId, discordUsername);
+    if (response.error) {
+      setToast({ type: "error", message: response.error });
+      return;
+    }
+
+    setDiscordConnected(true);
+    setToast({ type: "success", message: "Discord account connected for mock verification." });
   };
+
+  const needsWallet = quest.category === "testers" || quest.category === "builders";
+  const needsDiscord = quest.category === "discord";
+  const canVerify = (!needsWallet || isConnected) && (!needsDiscord || discordConnected);
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <Link href="/quests" className="inline-flex items-center gap-2 text-muted hover:text-cyan mb-8 fade-in">
+      <Link href="/quests" className="mb-8 inline-flex items-center gap-2 text-muted hover:text-cyan fade-in">
         <ChevronLeft className="size-4" />
-        Back to Quests
+        Back to quests
       </Link>
 
       <header className="mb-8 fade-in">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Quest</p>
+            <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">{quest.category} task</p>
             <h1 className="mt-2 text-4xl font-semibold">{quest.title}</h1>
-            <p className="mt-2 text-muted">{quest.category}</p>
+            <p className="mt-2 text-muted">{quest.verification}</p>
           </div>
-          <div className={`rounded border px-3 py-1 font-mono text-xs uppercase tracking-widest ${difficultyColors[quest.difficulty]}`}>
+          <div className={`border px-3 py-1 font-mono text-xs uppercase tracking-widest ${difficultyColors[quest.difficulty]}`}>
             {quest.difficulty}
           </div>
         </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-        {/* Main Content */}
         <section className="space-y-6">
-          {/* Description */}
           <div className="rune-panel p-6 fade-in-delay-1">
-            <h2 className="text-xl font-semibold mb-3">Description</h2>
-            <p className="text-muted leading-relaxed">{quest.description}</p>
+            <h2 className="mb-3 text-xl font-semibold">Description</h2>
+            <p className="leading-relaxed text-muted">{quest.description}</p>
           </div>
 
-          {/* Steps */}
           <div className="rune-panel p-6 fade-in-delay-2">
-            <h2 className="text-xl font-semibold mb-4">Steps</h2>
+            <h2 className="mb-4 text-xl font-semibold">Steps</h2>
             <ol className="space-y-3">
               {quest.steps.map((step, i) => (
-                <li key={i} className="flex gap-3 items-start">
+                <li key={step} className="flex items-start gap-3">
                   <span className="flex-shrink-0 font-mono text-sm font-bold text-cyan">
                     {String(i + 1).padStart(2, "0")}
                   </span>
@@ -129,85 +103,144 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
             </ol>
           </div>
 
-          {/* Proof Submission */}
+          {quest.category === "testers" ? (
+            <div className="rune-panel p-6 fade-in-delay-3">
+              <div className="flex items-center gap-2">
+                <TestTube2 className="size-5 text-cyan" />
+                <h2 className="text-xl font-semibold">Ritual testnet wallet check</h2>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-muted">
+                This verifier only considers indexed activity from the Ritual blockchain testnet. Production should
+                connect this to a Ritual RPC, explorer, or indexer.
+              </p>
+            </div>
+          ) : null}
+
+          {quest.category === "discord" ? (
+            <div className="rune-panel p-6 fade-in-delay-3">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="size-5 text-cyan" />
+                <h2 className="text-xl font-semibold">Connect Discord</h2>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <input
+                  value={discordId}
+                  onChange={(event) => setDiscordId(event.target.value)}
+                  className="border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
+                  placeholder="Discord ID"
+                />
+                <input
+                  value={discordUsername}
+                  onChange={(event) => setDiscordUsername(event.target.value)}
+                  className="border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
+                  placeholder="Discord username"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleDiscordConnect}
+                className="rune-button mt-4 inline-flex items-center gap-2 px-4 py-2 font-semibold button-press hover-lift"
+              >
+                <MessageCircle className="size-4" />
+                {discordConnected ? "Discord Connected" : "Connect Discord"}
+              </button>
+            </div>
+          ) : null}
+
           <div className="rune-panel p-6 fade-in-delay-3">
-            <h2 className="text-xl font-semibold mb-4">Submit Proof</h2>
-            {!isConnected ? (
-              <div className="border border-orange-500/30 bg-orange-500/5 rounded p-4 text-center text-muted">
-                Connect your wallet to submit proof.
+            <h2 className="mb-4 text-xl font-semibold">Verify Task</h2>
+            {needsWallet && !isConnected ? (
+              <div className="border border-orange-500/30 bg-orange-500/5 p-4 text-center text-muted">
+                Connect your wallet before verifying this task.
+              </div>
+            ) : needsDiscord && !discordConnected ? (
+              <div className="border border-orange-500/30 bg-orange-500/5 p-4 text-center text-muted">
+                Connect Discord before verifying this task.
               </div>
             ) : (
               <form onSubmit={form.handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Proof (transaction hash or URL)
-                  </label>
+                  <label className="mb-2 block text-sm font-medium">Proof or note</label>
                   <textarea
                     name="proof"
                     value={form.values.proof}
                     onChange={form.handleChange}
-                    placeholder="0x... or https://..."
-                    className="w-full border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30 rounded font-mono text-sm"
+                    placeholder={quest.expectedProof}
+                    className="w-full border border-cyan/15 bg-void px-3 py-2 font-mono text-sm outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
                     rows={4}
                   />
-                  {form.errors.proof && (
-                    <p className="mt-1 text-sm text-red-400">{form.errors.proof}</p>
-                  )}
                 </div>
                 <button
                   type="submit"
-                  disabled={form.isSubmitting}
+                  disabled={form.isSubmitting || !canVerify}
                   className="w-full rune-button px-4 py-2 font-semibold button-press hover-lift disabled:opacity-50"
                 >
-                  {form.isSubmitting ? "Submitting..." : "Submit Proof"}
+                  {form.isSubmitting ? "Verifying..." : "Run Verification"}
                 </button>
               </form>
             )}
           </div>
         </section>
 
-        {/* Sidebar */}
         <aside className="space-y-4">
-          {/* Reward Card */}
           <div className="rune-panel p-5 text-center fade-in-delay-1">
-            <p className="text-xs font-mono uppercase tracking-widest text-cyan mb-1">Reward</p>
-            <p className="text-3xl font-semibold flex items-center justify-center gap-2">
+            <p className="mb-1 font-mono text-xs uppercase tracking-widest text-cyan">Reward</p>
+            <p className="flex items-center justify-center gap-2 text-3xl font-semibold">
               <Zap className="size-6 text-gold" />
-              {quest.reward}
+              {quest.xp}
             </p>
             <p className="mt-2 text-xs text-muted">Experience Points</p>
           </div>
 
-          {/* Status */}
           <div className="rune-panel p-5 fade-in-delay-2">
-            <p className="text-xs font-mono uppercase tracking-widest text-cyan mb-2">Status</p>
-            {quest.completedAt ? (
-              <div className="rounded border border-green-500/30 bg-green-500/5 px-3 py-2 text-center">
-                <p className="text-sm text-green-400">Completed</p>
+            <p className="mb-2 font-mono text-xs uppercase tracking-widest text-cyan">Verification</p>
+            <div className="grid gap-3 text-sm">
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">Method</span>
+                <span className="font-mono">{quest.verification}</span>
               </div>
-            ) : (
-              <div className="rounded border border-cyan/30 bg-cyan/5 px-3 py-2 text-center">
-                <p className="text-sm text-cyan">In Progress</p>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">Limit</span>
+                <span className="font-mono">{quest.limit ? `${quest.limit} claim` : "Review based"}</span>
               </div>
-            )}
+              {quest.target ? (
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted">Target</span>
+                  <span className="font-mono">{quest.target}</span>
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          {/* Share */}
-          <button className="rune-button w-full inline-flex items-center justify-center gap-2 px-4 py-2 font-semibold button-press hover-lift">
+          {verification ? (
+            <div className={`rune-panel p-5 fade-in-delay-2 ${verification.ok ? "border-green/35" : "border-red-500/35"}`}>
+              <p className="mb-2 font-mono text-xs uppercase tracking-widest text-cyan">Result</p>
+              <p className={verification.ok ? "text-green" : "text-red-400"}>{verification.reason}</p>
+              {verification.value !== undefined ? (
+                <p className="mt-3 font-mono text-sm text-muted">
+                  {verification.value} / {verification.required}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          <button className="rune-button inline-flex w-full items-center justify-center gap-2 px-4 py-2 font-semibold button-press hover-lift">
             <Share2 className="size-4" />
-            Share Quest
+            Share Task
           </button>
+
+          {isConnected ? (
+            <div className="rune-panel p-4 text-xs text-muted">
+              <div className="flex items-center gap-2">
+                <Wallet className="size-4 text-cyan" />
+                <span className="font-mono">{wallet}</span>
+              </div>
+            </div>
+          ) : null}
         </aside>
       </div>
 
-      {/* Success Toast */}
-      {submitted && (
-        <Toast
-          type="success"
-          message="Proof submitted! Validators are reviewing..."
-          onClose={() => setSubmitted(false)}
-        />
-      )}
+      {toast ? <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} /> : null}
     </main>
   );
 };

@@ -3,11 +3,15 @@ import {
   achievements,
   builderClasses,
   calculateReputation,
+  demoDiscordActivity,
   demoPassport,
+  demoTestnetActivity,
   evolutionStages,
   getBuilderClass,
+  getQuest,
   getLevelProgress,
   leaderboard,
+  questCategories,
   quests
 } from "@ritual/domain";
 
@@ -33,6 +37,79 @@ function notFound(path: string) {
   };
 }
 
+async function readBody(request: import("node:http").IncomingMessage) {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  if (!chunks.length) return {};
+
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function verifyQuest(questId: string, wallet?: string, discordId?: string) {
+  const quest = getQuest(questId);
+  if (!quest) {
+    return { ok: false, reason: "Quest not found" };
+  }
+
+  if (quest.category === "testers") {
+    if (!wallet) return { ok: false, reason: "Wallet is required for Ritual testnet verification" };
+
+    const value = quest.metric ? Number(demoTestnetActivity[quest.metric as keyof typeof demoTestnetActivity] ?? 0) : 0;
+    const required = quest.target ?? 0;
+
+    return {
+      ok: value >= required,
+      reason:
+        value >= required
+          ? "Ritual testnet activity threshold met"
+          : `Ritual testnet activity is ${value}; ${required} required`,
+      source: "ritual-testnet-indexer",
+      value,
+      required,
+      capped: quest.limit === 1
+    };
+  }
+
+  if (quest.category === "discord") {
+    if (!discordId) return { ok: false, reason: "Discord account is required for Discord verification" };
+
+    if (quest.verification === "DISCORD_ROLE") {
+      const hasRole = quest.roleName ? demoDiscordActivity.roles.includes(quest.roleName) : false;
+      return {
+        ok: hasRole,
+        reason: hasRole ? `${quest.roleName} role found in Ritual Discord` : `${quest.roleName} role not found`,
+        source: "ritual-discord-bot",
+        roles: demoDiscordActivity.roles,
+        requiredRole: quest.roleName
+      };
+    }
+
+    const required = quest.target ?? 0;
+    return {
+      ok: demoDiscordActivity.messages >= required,
+      reason:
+        demoDiscordActivity.messages >= required
+          ? "Ritual Discord message threshold met"
+          : `Discord messages are ${demoDiscordActivity.messages}; ${required} required`,
+      source: "ritual-discord-bot",
+      value: demoDiscordActivity.messages,
+      required
+    };
+  }
+
+  return {
+    ok: true,
+    reason: "Builder quest proof accepted for review",
+    source: quest.verification
+  };
+}
+
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
 
@@ -51,12 +128,81 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (url.pathname === "/api/quest-categories") {
+    json(response, 200, { categories: questCategories });
+    return;
+  }
+
   if (url.pathname === "/api/quests") {
     const classFilter = Number(url.searchParams.get("class"));
-    const filtered = Number.isNaN(classFilter)
+    const categoryFilter = url.searchParams.get("category");
+    const classFiltered = Number.isNaN(classFilter)
       ? quests
       : quests.filter((quest) => !quest.classId || quest.classId === classFilter);
+    const filtered = categoryFilter
+      ? classFiltered.filter((quest) => quest.category === categoryFilter)
+      : classFiltered;
     json(response, 200, { quests: filtered, total: filtered.length });
+    return;
+  }
+
+  const questMatch = url.pathname.match(/^\/api\/quests\/([^/]+)$/);
+  if (questMatch && request.method === "GET") {
+    const quest = getQuest(questMatch[1]);
+    if (!quest) {
+      json(response, 404, notFound(url.pathname));
+      return;
+    }
+
+    json(response, 200, { quest });
+    return;
+  }
+
+  if (url.pathname === "/api/testnet/activity") {
+    const wallet = url.searchParams.get("wallet") ?? demoTestnetActivity.wallet;
+    json(response, 200, {
+      activity: {
+        ...demoTestnetActivity,
+        wallet,
+        network: "ritual-testnet"
+      }
+    });
+    return;
+  }
+
+  if (url.pathname === "/api/discord/activity") {
+    const discordId = url.searchParams.get("discordId") ?? demoDiscordActivity.discordId;
+    json(response, 200, {
+      activity: {
+        ...demoDiscordActivity,
+        discordId
+      }
+    });
+    return;
+  }
+
+  if (url.pathname === "/api/discord/connect" && request.method === "POST") {
+    const body = await readBody(request) as { wallet?: string; discordId?: string; username?: string };
+    json(response, 200, {
+      discord: {
+        ...demoDiscordActivity,
+        connectedWallet: body.wallet ?? demoDiscordActivity.connectedWallet,
+        discordId: body.discordId ?? demoDiscordActivity.discordId,
+        username: body.username ?? demoDiscordActivity.username
+      }
+    });
+    return;
+  }
+
+  const verifyMatch = url.pathname.match(/^\/api\/quests\/([^/]+)\/verify$/);
+  if (verifyMatch && request.method === "POST") {
+    const body = await readBody(request) as { wallet?: string; discordId?: string; proof?: string };
+    const result = verifyQuest(verifyMatch[1], body.wallet, body.discordId);
+    json(response, result.ok ? 200 : 422, {
+      questId: verifyMatch[1],
+      proof: body.proof,
+      verification: result
+    });
     return;
   }
 
@@ -90,7 +236,9 @@ const server = createServer(async (request, response) => {
         class: getBuilderClass(demoPassport.classId),
         reputation: calculateReputation(demoPassport),
         achievements: achievements.filter((achievement) => achievement.unlocked),
-        completedQuests: quests.filter((quest) => demoPassport.completedQuestIds.includes(quest.id))
+        completedQuests: quests.filter((quest) => demoPassport.completedQuestIds.includes(quest.id)),
+        testnetActivity: demoTestnetActivity,
+        discordActivity: demoDiscordActivity
       }
     });
     return;

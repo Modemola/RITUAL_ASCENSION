@@ -2,9 +2,31 @@ export type BuilderClassId = 1 | 2 | 3 | 4 | 5;
 
 export type QuestType = "CORE" | "CLASS" | "ORACLE" | "FULL_PROJECT" | "COMMUNITY";
 
-export type VerificationMethod = "TX_HASH" | "MANUAL_REVIEW" | "AI_REVIEW";
+export type QuestCategoryId = "builders" | "testers" | "discord";
+
+export type VerificationMethod =
+  | "TX_HASH"
+  | "MANUAL_REVIEW"
+  | "AI_REVIEW"
+  | "TESTNET_ACTIVITY"
+  | "DISCORD_ACTIVITY"
+  | "DISCORD_ROLE";
 
 export type QuestStatus = "available" | "in_progress" | "completed" | "locked";
+
+export type QuestDifficulty = "common" | "uncommon" | "rare" | "epic" | "legendary";
+
+export type TestnetMetric = "completedTasks" | "uniqueContracts" | "transactions" | "activeDays";
+
+export type DiscordMetric = "messages" | "roles";
+
+export interface QuestCategory {
+  id: QuestCategoryId;
+  name: string;
+  shortName: string;
+  description: string;
+  verificationSummary: string;
+}
 
 export interface BuilderClass {
   id: BuilderClassId;
@@ -18,12 +40,19 @@ export interface Quest {
   id: string;
   title: string;
   description: string;
+  category: QuestCategoryId;
   type: QuestType;
   classId?: BuilderClassId;
   xp: number;
   verification: VerificationMethod;
   status: QuestStatus;
   expectedProof: string;
+  difficulty: QuestDifficulty;
+  steps: string[];
+  limit?: number;
+  metric?: TestnetMetric | DiscordMetric;
+  target?: number;
+  roleName?: string;
 }
 
 export interface Achievement {
@@ -46,6 +75,25 @@ export interface PassportProfile {
   activeWeeks: number;
   projectsCompleted: number;
   agentsDeployed: number;
+}
+
+export interface TestnetActivity {
+  wallet: string;
+  network: "ritual-testnet";
+  completedTasks: number;
+  uniqueContracts: number;
+  transactions: number;
+  activeDays: number;
+  lastIndexedBlock: number;
+}
+
+export interface DiscordActivity {
+  discordId: string;
+  username: string;
+  serverId: string;
+  messages: number;
+  roles: string[];
+  connectedWallet?: string;
 }
 
 export const builderClasses: BuilderClass[] = [
@@ -94,68 +142,564 @@ export const evolutionStages = [
   { id: 5, name: "Ascendant", trigger: "Reputation reaches 90 or community approval" }
 ];
 
+export const questCategories: QuestCategory[] = [
+  {
+    id: "builders",
+    name: "Builders on Ritual",
+    shortName: "Builders",
+    description: "Product-building quests for builders shipping contracts, apps, agents, dashboards, and full Ritual projects.",
+    verificationSummary: "Validated with transaction hashes, shipped project links, AI review, or manual review."
+  },
+  {
+    id: "testers",
+    name: "Testers on Ritual",
+    shortName: "Testers",
+    description: "Testnet participation quests for wallets that complete tasks, interact with contracts, and keep Ritual testnet activity alive.",
+    verificationSummary: "Validated from Ritual testnet wallet activity only."
+  },
+  {
+    id: "discord",
+    name: "Discord tasks",
+    shortName: "Discord",
+    description: "Community progression quests tied to activity and roles inside the Ritual Discord server.",
+    verificationSummary: "Validated through a connected Discord account and Ritual Discord server roles/activity."
+  }
+];
+
 export const quests: Quest[] = [
   {
     id: "deploy-contract",
     title: "Deploy Your First Ritual Contract",
     description: "Ship a small contract to Ritual testnet and submit the deployment transaction hash.",
+    category: "builders",
     type: "CORE",
     xp: 500,
     verification: "TX_HASH",
     status: "available",
-    expectedProof: "Deployment transaction hash"
+    expectedProof: "Deployment transaction hash",
+    difficulty: "common",
+    steps: [
+      "Deploy a contract on Ritual testnet.",
+      "Copy the deployment transaction hash.",
+      "Submit the hash for verification."
+    ]
   },
   {
     id: "llm-precompile",
     title: "Call the Ritual LLM Precompile",
     description: "Make a verified call to the Ritual LLM precompile and capture the successful transaction.",
+    category: "builders",
     type: "CORE",
     xp: 750,
     verification: "TX_HASH",
     status: "in_progress",
-    expectedProof: "Transaction hash with LLM precompile logs"
+    expectedProof: "Transaction hash with LLM precompile logs",
+    difficulty: "uncommon",
+    steps: [
+      "Call the Ritual LLM precompile from a contract or script.",
+      "Confirm the transaction succeeded on Ritual testnet.",
+      "Submit the transaction hash with the relevant logs."
+    ]
   },
   {
     id: "build-agent",
     title: "Deploy an Autonomous Agent",
     description: "Create an agent that can perform a scheduled on-chain or off-chain action.",
+    category: "builders",
     type: "CLASS",
     classId: 2,
     xp: 1000,
     verification: "TX_HASH",
     status: "available",
-    expectedProof: "Agent deployment transaction hash"
+    expectedProof: "Agent deployment transaction hash",
+    difficulty: "rare",
+    steps: [
+      "Build an autonomous agent for a useful Ritual workflow.",
+      "Deploy or register the agent.",
+      "Submit the transaction hash or public run proof."
+    ]
   },
   {
     id: "analytics-dashboard",
     title: "Build a Ritual Analytics Dashboard",
     description: "Publish a public dashboard that tracks useful Ritual ecosystem activity.",
+    category: "builders",
     type: "CLASS",
     classId: 4,
     xp: 1500,
     verification: "AI_REVIEW",
     status: "available",
-    expectedProof: "GitHub or live dashboard URL"
+    expectedProof: "GitHub or live dashboard URL",
+    difficulty: "rare",
+    steps: [
+      "Build a dashboard with useful Ritual testnet or ecosystem data.",
+      "Publish the dashboard or repository.",
+      "Submit the public URL for review."
+    ]
   },
   {
     id: "full-project",
     title: "Launch a Full Ritual Project",
     description: "Combine contracts, a frontend, and documented usage into a complete builder artifact.",
+    category: "builders",
     type: "FULL_PROJECT",
     xp: 2500,
     verification: "MANUAL_REVIEW",
     status: "locked",
-    expectedProof: "Repository URL and project summary"
+    expectedProof: "Repository URL and project summary",
+    difficulty: "legendary",
+    steps: [
+      "Ship a full Ritual project with contracts, frontend, and docs.",
+      "Publish a repository or live demo.",
+      "Submit the project summary for manual review."
+    ]
   },
   {
     id: "oracle-checkin",
     title: "Ask the Oracle for Your Next Move",
     description: "Start an Oracle Mentor conversation and turn the recommendation into your next quest.",
+    category: "builders",
     type: "ORACLE",
     xp: 300,
     verification: "MANUAL_REVIEW",
     status: "available",
-    expectedProof: "Oracle conversation ID"
+    expectedProof: "Oracle conversation ID",
+    difficulty: "common",
+    steps: [
+      "Open the Oracle mentor.",
+      "Ask for the next best Ritual builder task.",
+      "Submit the Oracle conversation ID."
+    ]
+  },
+  {
+    id: "tester-one-task",
+    title: "Complete 1 Ritual Testnet Task",
+    description: "Finish your first trackable Ritual testnet task with the connected wallet.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 100,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with at least 1 indexed Ritual testnet task",
+    difficulty: "common",
+    steps: [
+      "Connect the wallet used on Ritual testnet.",
+      "Run verification against Ritual testnet activity.",
+      "Claim XP after the wallet reaches the task threshold."
+    ],
+    limit: 1,
+    metric: "completedTasks",
+    target: 1
+  },
+  {
+    id: "tester-ten-tasks",
+    title: "Complete 10 Ritual Testnet Tasks",
+    description: "Show consistent testnet participation by completing ten indexed Ritual tasks.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 500,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with at least 10 indexed Ritual testnet tasks",
+    difficulty: "uncommon",
+    steps: [
+      "Complete at least ten eligible Ritual testnet tasks.",
+      "Connect the same wallet in the product.",
+      "Run wallet activity verification."
+    ],
+    limit: 1,
+    metric: "completedTasks",
+    target: 10
+  },
+  {
+    id: "tester-hundred-tasks",
+    title: "Complete 100 Ritual Testnet Tasks",
+    description: "Reach the high-water tester milestone for repeated Ritual testnet task completion.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 2500,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with at least 100 indexed Ritual testnet tasks",
+    difficulty: "epic",
+    steps: [
+      "Complete one hundred eligible Ritual testnet tasks.",
+      "Keep activity on the same wallet.",
+      "Run wallet activity verification. This milestone is capped to one claim."
+    ],
+    limit: 1,
+    metric: "completedTasks",
+    target: 100
+  },
+  {
+    id: "tester-contract-explorer",
+    title: "Interact With 10 Different Ritual Contracts",
+    description: "Explore the testnet by interacting with ten unique contract addresses on Ritual testnet.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 900,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with interactions across 10 unique Ritual testnet contracts",
+    difficulty: "rare",
+    steps: [
+      "Use your wallet across different Ritual testnet contracts.",
+      "Reach at least ten unique contract interactions.",
+      "Run Ritual testnet wallet verification."
+    ],
+    limit: 1,
+    metric: "uniqueContracts",
+    target: 10
+  },
+  {
+    id: "tester-active-week",
+    title: "Stay Active for 7 Ritual Testnet Days",
+    description: "Build testnet consistency by recording wallet activity across seven different days.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 700,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with Ritual testnet activity on 7 different days",
+    difficulty: "uncommon",
+    steps: [
+      "Use Ritual testnet across several days.",
+      "Reach seven unique active days.",
+      "Run the wallet activity check."
+    ],
+    limit: 1,
+    metric: "activeDays",
+    target: 7
+  },
+  {
+    id: "discord-first-message",
+    title: "Send Your First Ritual Discord Message",
+    description: "Join the Ritual Discord server and send the first message from your connected Discord account.",
+    category: "discord",
+    type: "COMMUNITY",
+    xp: 100,
+    verification: "DISCORD_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected Discord account with at least 1 message in the Ritual server",
+    difficulty: "common",
+    steps: [
+      "Connect your Discord account.",
+      "Send a message in the Ritual Discord server.",
+      "Run Discord activity verification."
+    ],
+    limit: 1,
+    metric: "messages",
+    target: 1
+  },
+  {
+    id: "discord-bitty-role",
+    title: "Attain the Bitty Role",
+    description: "Earn the Bitty role in the Ritual Discord server.",
+    category: "discord",
+    type: "COMMUNITY",
+    xp: 250,
+    verification: "DISCORD_ROLE",
+    status: "available",
+    expectedProof: "Connected Discord account with the Bitty role in the Ritual server",
+    difficulty: "uncommon",
+    steps: [
+      "Connect your Discord account.",
+      "Earn or receive the Bitty role in the Ritual server.",
+      "Run Discord role verification."
+    ],
+    limit: 1,
+    metric: "roles",
+    roleName: "Bitty"
+  },
+  {
+    id: "discord-ritty-role",
+    title: "Attain the Ritty Role",
+    description: "Earn the Ritty role in the Ritual Discord server.",
+    category: "discord",
+    type: "COMMUNITY",
+    xp: 500,
+    verification: "DISCORD_ROLE",
+    status: "available",
+    expectedProof: "Connected Discord account with the Ritty role in the Ritual server",
+    difficulty: "rare",
+    steps: [
+      "Connect your Discord account.",
+      "Earn or receive the Ritty role in the Ritual server.",
+      "Run Discord role verification."
+    ],
+    limit: 1,
+    metric: "roles",
+    roleName: "Ritty"
+  },
+  {
+    id: "discord-community-voice",
+    title: "Send 100 Ritual Discord Messages",
+    description: "Become an active Ritual community member with one hundred messages in the server.",
+    category: "discord",
+    type: "COMMUNITY",
+    xp: 1000,
+    verification: "DISCORD_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected Discord account with at least 100 messages in the Ritual server",
+    difficulty: "epic",
+    steps: [
+      "Connect your Discord account.",
+      "Participate constructively in the Ritual Discord server.",
+      "Run Discord activity verification after reaching 100 messages."
+    ],
+    limit: 1,
+    metric: "messages",
+    target: 100
+  },
+  {
+    id: "builder-starter-frontend",
+    title: "Ship a Ritual Frontend",
+    description: "Build a public frontend that reads from or writes to a Ritual testnet contract.",
+    category: "builders",
+    type: "FULL_PROJECT",
+    xp: 1200,
+    verification: "AI_REVIEW",
+    status: "available",
+    expectedProof: "Live app URL and repository URL",
+    difficulty: "rare",
+    steps: [
+      "Build a usable frontend for a Ritual testnet contract.",
+      "Publish the frontend and source code.",
+      "Submit the live URL and repository for review."
+    ],
+    limit: 1
+  },
+  {
+    id: "builder-open-source-template",
+    title: "Publish a Ritual Starter Template",
+    description: "Create a reusable starter repo that helps other builders ship faster on Ritual.",
+    category: "builders",
+    type: "FULL_PROJECT",
+    xp: 1800,
+    verification: "MANUAL_REVIEW",
+    status: "available",
+    expectedProof: "Template repository URL with setup instructions",
+    difficulty: "epic",
+    steps: [
+      "Create a starter template for a Ritual builder workflow.",
+      "Document setup, environment variables, and deployment.",
+      "Submit the repository for manual review."
+    ],
+    limit: 1
+  },
+  {
+    id: "builder-contract-suite",
+    title: "Deploy a Contract Suite",
+    description: "Deploy at least three related contracts that work together as one Ritual protocol primitive.",
+    category: "builders",
+    type: "CORE",
+    xp: 1600,
+    verification: "TX_HASH",
+    status: "available",
+    expectedProof: "Deployment transaction hashes for the related contracts",
+    difficulty: "rare",
+    steps: [
+      "Design three related contracts.",
+      "Deploy them on Ritual testnet.",
+      "Submit the transaction hashes for verification."
+    ],
+    limit: 1
+  },
+  {
+    id: "builder-integration-guide",
+    title: "Write a Ritual Integration Guide",
+    description: "Publish a technical guide that teaches another builder how to use a Ritual primitive.",
+    category: "builders",
+    type: "COMMUNITY",
+    xp: 800,
+    verification: "MANUAL_REVIEW",
+    status: "available",
+    expectedProof: "Published guide URL",
+    difficulty: "uncommon",
+    steps: [
+      "Choose a Ritual primitive or workflow.",
+      "Write a clear technical guide with runnable examples.",
+      "Submit the published URL for review."
+    ],
+    limit: 1
+  },
+  {
+    id: "tester-twenty-five-tasks",
+    title: "Complete 25 Ritual Testnet Tasks",
+    description: "Reach the intermediate tester milestone with twenty-five eligible Ritual testnet tasks.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 1000,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with at least 25 indexed Ritual testnet tasks",
+    difficulty: "rare",
+    steps: [
+      "Complete twenty-five eligible Ritual testnet tasks.",
+      "Keep the same wallet connected.",
+      "Run wallet activity verification."
+    ],
+    limit: 1,
+    metric: "completedTasks",
+    target: 25
+  },
+  {
+    id: "tester-fifty-transactions",
+    title: "Send 50 Ritual Testnet Transactions",
+    description: "Prove hands-on testing by sending fifty successful transactions on Ritual testnet.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 850,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with at least 50 Ritual testnet transactions",
+    difficulty: "uncommon",
+    steps: [
+      "Use Ritual testnet contracts with your connected wallet.",
+      "Reach fifty successful transactions.",
+      "Run Ritual testnet wallet verification."
+    ],
+    limit: 1,
+    metric: "transactions",
+    target: 50
+  },
+  {
+    id: "tester-hundred-transactions",
+    title: "Send 100 Ritual Testnet Transactions",
+    description: "Reach the capped transaction-volume tester milestone on Ritual testnet.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 1500,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with at least 100 Ritual testnet transactions",
+    difficulty: "epic",
+    steps: [
+      "Send one hundred successful Ritual testnet transactions.",
+      "Avoid duplicate spam patterns; activity should be meaningful.",
+      "Run wallet activity verification."
+    ],
+    limit: 1,
+    metric: "transactions",
+    target: 100
+  },
+  {
+    id: "tester-twenty-five-contracts",
+    title: "Interact With 25 Different Ritual Contracts",
+    description: "Explore deeper into the testnet by touching twenty-five unique Ritual contract addresses.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 1700,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with interactions across 25 unique Ritual testnet contracts",
+    difficulty: "epic",
+    steps: [
+      "Interact with different Ritual testnet contracts.",
+      "Reach twenty-five unique contract addresses.",
+      "Run Ritual testnet wallet verification."
+    ],
+    limit: 1,
+    metric: "uniqueContracts",
+    target: 25
+  },
+  {
+    id: "tester-active-month",
+    title: "Stay Active for 30 Ritual Testnet Days",
+    description: "Become a long-running tester with activity across thirty different Ritual testnet days.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 2200,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with Ritual testnet activity on 30 different days",
+    difficulty: "legendary",
+    steps: [
+      "Use Ritual testnet consistently across a month.",
+      "Reach thirty unique active days.",
+      "Run wallet activity verification. This milestone is capped to one claim."
+    ],
+    limit: 1,
+    metric: "activeDays",
+    target: 30
+  },
+  {
+    id: "discord-ten-messages",
+    title: "Send 10 Ritual Discord Messages",
+    description: "Move beyond your first hello with ten constructive messages in the Ritual Discord server.",
+    category: "discord",
+    type: "COMMUNITY",
+    xp: 200,
+    verification: "DISCORD_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected Discord account with at least 10 messages in the Ritual server",
+    difficulty: "common",
+    steps: [
+      "Connect your Discord account.",
+      "Send ten constructive messages in the Ritual Discord server.",
+      "Run Discord activity verification."
+    ],
+    limit: 1,
+    metric: "messages",
+    target: 10
+  },
+  {
+    id: "discord-fifty-messages",
+    title: "Send 50 Ritual Discord Messages",
+    description: "Become visibly active in the Ritual Discord server with fifty messages.",
+    category: "discord",
+    type: "COMMUNITY",
+    xp: 600,
+    verification: "DISCORD_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected Discord account with at least 50 messages in the Ritual server",
+    difficulty: "uncommon",
+    steps: [
+      "Connect your Discord account.",
+      "Participate in Ritual Discord conversations.",
+      "Run verification after reaching fifty messages."
+    ],
+    limit: 1,
+    metric: "messages",
+    target: 50
+  },
+  {
+    id: "discord-infernal-role",
+    title: "Attain the Infernal Role",
+    description: "Earn the Infernal role in the Ritual Discord server.",
+    category: "discord",
+    type: "COMMUNITY",
+    xp: 900,
+    verification: "DISCORD_ROLE",
+    status: "available",
+    expectedProof: "Connected Discord account with the Infernal role in the Ritual server",
+    difficulty: "epic",
+    steps: [
+      "Connect your Discord account.",
+      "Earn or receive the Infernal role in the Ritual server.",
+      "Run Discord role verification."
+    ],
+    limit: 1,
+    metric: "roles",
+    roleName: "Infernal"
+  },
+  {
+    id: "discord-helper",
+    title: "Help 5 Builders in Discord",
+    description: "Support other Ritual builders by answering questions or sharing useful resources.",
+    category: "discord",
+    type: "COMMUNITY",
+    xp: 750,
+    verification: "MANUAL_REVIEW",
+    status: "available",
+    expectedProof: "Links to helpful Ritual Discord messages",
+    difficulty: "rare",
+    steps: [
+      "Help five builders in Ritual Discord.",
+      "Collect links to the relevant messages.",
+      "Submit the links for review."
+    ],
+    limit: 1
   }
 ];
 
@@ -257,10 +801,29 @@ export const demoPassport: PassportProfile = {
   xp: 3450,
   stage: 2,
   achievements,
-  completedQuestIds: ["deploy-contract"],
+  completedQuestIds: ["deploy-contract", "tester-one-task", "discord-first-message"],
   activeWeeks: 3,
   projectsCompleted: 0,
   agentsDeployed: 1
+};
+
+export const demoTestnetActivity: TestnetActivity = {
+  wallet: demoPassport.wallet,
+  network: "ritual-testnet",
+  completedTasks: 18,
+  uniqueContracts: 12,
+  transactions: 47,
+  activeDays: 8,
+  lastIndexedBlock: 1289402
+};
+
+export const demoDiscordActivity: DiscordActivity = {
+  discordId: "ritual-demo-user",
+  username: "ritual_builder",
+  serverId: "ritual-discord-demo",
+  messages: 42,
+  roles: ["Bitty"],
+  connectedWallet: demoPassport.wallet
 };
 
 export const leaderboard = [
@@ -272,4 +835,16 @@ export const leaderboard = [
 
 export function getBuilderClass(id: BuilderClassId): BuilderClass {
   return builderClasses.find((builderClass) => builderClass.id === id) ?? builderClasses[0];
+}
+
+export function getQuest(id: string): Quest | undefined {
+  return quests.find((quest) => quest.id === id);
+}
+
+export function getQuestsByCategory(category: QuestCategoryId): Quest[] {
+  return quests.filter((quest) => quest.category === category);
+}
+
+export function getQuestCategory(id: QuestCategoryId): QuestCategory {
+  return questCategories.find((category) => category.id === id) ?? questCategories[0];
 }
