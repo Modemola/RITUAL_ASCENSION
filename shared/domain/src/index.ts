@@ -272,66 +272,6 @@ export const quests: Quest[] = [
     ]
   },
   {
-    id: "tester-one-task",
-    title: "Complete 1 Ritual Testnet Task",
-    description: "Finish your first trackable Ritual testnet task with the connected wallet.",
-    category: "testers",
-    type: "COMMUNITY",
-    xp: 100,
-    verification: "TESTNET_ACTIVITY",
-    status: "available",
-    expectedProof: "Connected wallet with at least 1 indexed Ritual testnet task",
-    difficulty: "common",
-    steps: [
-      "Connect the wallet used on Ritual testnet.",
-      "Run verification against Ritual testnet activity.",
-      "Claim XP after the wallet reaches the task threshold."
-    ],
-    limit: 1,
-    metric: "completedTasks",
-    target: 1
-  },
-  {
-    id: "tester-ten-tasks",
-    title: "Complete 10 Ritual Testnet Tasks",
-    description: "Show consistent testnet participation by completing ten indexed Ritual tasks.",
-    category: "testers",
-    type: "COMMUNITY",
-    xp: 500,
-    verification: "TESTNET_ACTIVITY",
-    status: "available",
-    expectedProof: "Connected wallet with at least 10 indexed Ritual testnet tasks",
-    difficulty: "uncommon",
-    steps: [
-      "Complete at least ten eligible Ritual testnet tasks.",
-      "Connect the same wallet in the product.",
-      "Run wallet activity verification."
-    ],
-    limit: 1,
-    metric: "completedTasks",
-    target: 10
-  },
-  {
-    id: "tester-hundred-tasks",
-    title: "Complete 100 Ritual Testnet Tasks",
-    description: "Reach the high-water tester milestone for repeated Ritual testnet task completion.",
-    category: "testers",
-    type: "COMMUNITY",
-    xp: 2500,
-    verification: "TESTNET_ACTIVITY",
-    status: "available",
-    expectedProof: "Connected wallet with at least 100 indexed Ritual testnet tasks",
-    difficulty: "epic",
-    steps: [
-      "Complete one hundred eligible Ritual testnet tasks.",
-      "Keep activity on the same wallet.",
-      "Run wallet activity verification. This milestone is capped to one claim."
-    ],
-    limit: 1,
-    metric: "completedTasks",
-    target: 100
-  },
-  {
     id: "tester-contract-explorer",
     title: "Interact With 10 Different Ritual Contracts",
     description: "Explore the testnet by interacting with ten unique contract addresses on Ritual testnet.",
@@ -524,26 +464,6 @@ export const quests: Quest[] = [
     limit: 1
   },
   {
-    id: "tester-twenty-five-tasks",
-    title: "Complete 25 Ritual Testnet Tasks",
-    description: "Reach the intermediate tester milestone with twenty-five eligible Ritual testnet tasks.",
-    category: "testers",
-    type: "COMMUNITY",
-    xp: 1000,
-    verification: "TESTNET_ACTIVITY",
-    status: "available",
-    expectedProof: "Connected wallet with at least 25 indexed Ritual testnet tasks",
-    difficulty: "rare",
-    steps: [
-      "Complete twenty-five eligible Ritual testnet tasks.",
-      "Keep the same wallet connected.",
-      "Run wallet activity verification."
-    ],
-    limit: 1,
-    metric: "completedTasks",
-    target: 25
-  },
-  {
     id: "tester-fifty-transactions",
     title: "Send 50 Ritual Testnet Transactions",
     description: "Prove hands-on testing by sending fifty successful transactions on Ritual testnet.",
@@ -584,6 +504,26 @@ export const quests: Quest[] = [
     target: 100
   },
   {
+    id: "tester-thousand-transactions",
+    title: "Send 1000 Ritual Transactions",
+    description: "Reach the capped high-volume tester milestone with one thousand successful Ritual testnet transactions.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 5000,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with at least 1000 Ritual testnet transactions",
+    difficulty: "legendary",
+    steps: [
+      "Use Ritual testnet consistently with your connected wallet.",
+      "Reach one thousand successful Ritual testnet transactions.",
+      "Run wallet activity verification. This milestone is capped to one claim."
+    ],
+    limit: 1,
+    metric: "transactions",
+    target: 1000
+  },
+  {
     id: "tester-twenty-five-contracts",
     title: "Interact With 25 Different Ritual Contracts",
     description: "Explore deeper into the testnet by touching twenty-five unique Ritual contract addresses.",
@@ -604,6 +544,46 @@ export const quests: Quest[] = [
     target: 25
   },
   {
+    id: "tester-fifty-contracts",
+    title: "Interact With 50 Different Ritual Contracts",
+    description: "Explore broadly by interacting with fifty unique Ritual testnet contract addresses.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 2800,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with interactions across 50 unique Ritual testnet contracts",
+    difficulty: "legendary",
+    steps: [
+      "Interact with many different Ritual testnet contracts.",
+      "Reach fifty unique contract addresses.",
+      "Run Ritual testnet wallet verification."
+    ],
+    limit: 1,
+    metric: "uniqueContracts",
+    target: 50
+  },
+  {
+    id: "tester-hundred-contracts",
+    title: "Interact With 100 Different Ritual Contracts",
+    description: "Reach the top contract-explorer milestone by interacting with one hundred unique Ritual contracts.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 5500,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with interactions across 100 unique Ritual testnet contracts",
+    difficulty: "legendary",
+    steps: [
+      "Explore the Ritual testnet across a wide contract set.",
+      "Reach one hundred unique contract addresses.",
+      "Run Ritual testnet wallet verification. This milestone is capped to one claim."
+    ],
+    limit: 1,
+    metric: "uniqueContracts",
+    target: 100
+  },
+  {
     id: "tester-active-month",
     title: "Stay Active for 30 Ritual Testnet Days",
     description: "Become a long-running tester with activity across thirty different Ritual testnet days.",
@@ -622,6 +602,66 @@ export const quests: Quest[] = [
     limit: 1,
     metric: "activeDays",
     target: 30
+  },
+  {
+    id: "tester-active-fifty-days",
+    title: "Stay Active for 50 Ritual Testnet Days",
+    description: "Show long-term Ritual testnet activity across fifty different active days.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 3500,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with Ritual testnet activity on 50 different days",
+    difficulty: "legendary",
+    steps: [
+      "Use Ritual testnet across many different days.",
+      "Reach fifty unique active days.",
+      "Run wallet activity verification."
+    ],
+    limit: 1,
+    metric: "activeDays",
+    target: 50
+  },
+  {
+    id: "tester-active-hundred-days",
+    title: "Stay Active for 100 Ritual Testnet Days",
+    description: "Reach a major consistency milestone with one hundred different Ritual testnet active days.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 7000,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with Ritual testnet activity on 100 different days",
+    difficulty: "legendary",
+    steps: [
+      "Keep using Ritual testnet over a long period.",
+      "Reach one hundred unique active days.",
+      "Run wallet activity verification. This milestone is capped to one claim."
+    ],
+    limit: 1,
+    metric: "activeDays",
+    target: 100
+  },
+  {
+    id: "tester-active-two-hundred-days",
+    title: "Stay Active for 200 Ritual Testnet Days",
+    description: "Earn the highest tester consistency milestone with two hundred Ritual testnet active days.",
+    category: "testers",
+    type: "COMMUNITY",
+    xp: 12000,
+    verification: "TESTNET_ACTIVITY",
+    status: "available",
+    expectedProof: "Connected wallet with Ritual testnet activity on 200 different days",
+    difficulty: "legendary",
+    steps: [
+      "Stay active on Ritual testnet across two hundred different days.",
+      "Keep the same wallet connected for verification.",
+      "Run wallet activity verification. This milestone is capped to one claim."
+    ],
+    limit: 1,
+    metric: "activeDays",
+    target: 200
   },
   {
     id: "discord-ten-messages",
@@ -664,24 +704,64 @@ export const quests: Quest[] = [
     target: 50
   },
   {
-    id: "discord-infernal-role",
-    title: "Attain the Infernal Role",
-    description: "Earn the Infernal role in the Ritual Discord server.",
+    id: "discord-ritualist-role",
+    title: "Attain the Ritualist Role",
+    description: "Earn the Ritualist role in the Ritual Discord server.",
     category: "discord",
     type: "COMMUNITY",
     xp: 900,
     verification: "DISCORD_ROLE",
     status: "available",
-    expectedProof: "Connected Discord account with the Infernal role in the Ritual server",
+    expectedProof: "Connected Discord account with the Ritualist role in the Ritual server",
     difficulty: "epic",
     steps: [
       "Connect your Discord account.",
-      "Earn or receive the Infernal role in the Ritual server.",
+      "Earn or receive the Ritualist role in the Ritual server.",
       "Run Discord role verification."
     ],
     limit: 1,
     metric: "roles",
-    roleName: "Infernal"
+    roleName: "Ritualist"
+  },
+  {
+    id: "discord-radiant-ritualist-role",
+    title: "Attain the Radiant Ritualist Role",
+    description: "Earn the Radiant Ritualist role in the Ritual Discord server.",
+    category: "discord",
+    type: "COMMUNITY",
+    xp: 1600,
+    verification: "DISCORD_ROLE",
+    status: "available",
+    expectedProof: "Connected Discord account with the Radiant Ritualist role in the Ritual server",
+    difficulty: "legendary",
+    steps: [
+      "Connect your Discord account.",
+      "Earn or receive the Radiant Ritualist role in the Ritual server.",
+      "Run Discord role verification."
+    ],
+    limit: 1,
+    metric: "roles",
+    roleName: "Radiant Ritualist"
+  },
+  {
+    id: "discord-mage-role",
+    title: "Attain the Mage Role",
+    description: "Earn the Mage role in the Ritual Discord server.",
+    category: "discord",
+    type: "COMMUNITY",
+    xp: 1200,
+    verification: "DISCORD_ROLE",
+    status: "available",
+    expectedProof: "Connected Discord account with the Mage role in the Ritual server",
+    difficulty: "epic",
+    steps: [
+      "Connect your Discord account.",
+      "Earn or receive the Mage role in the Ritual server.",
+      "Run Discord role verification."
+    ],
+    limit: 1,
+    metric: "roles",
+    roleName: "Mage"
   },
   {
     id: "discord-helper",
@@ -801,7 +881,7 @@ export const demoPassport: PassportProfile = {
   xp: 3450,
   stage: 2,
   achievements,
-  completedQuestIds: ["deploy-contract", "tester-one-task", "discord-first-message"],
+  completedQuestIds: ["deploy-contract", "tester-contract-explorer", "discord-first-message"],
   activeWeeks: 3,
   projectsCompleted: 0,
   agentsDeployed: 1
@@ -811,9 +891,9 @@ export const demoTestnetActivity: TestnetActivity = {
   wallet: demoPassport.wallet,
   network: "ritual-testnet",
   completedTasks: 18,
-  uniqueContracts: 12,
-  transactions: 47,
-  activeDays: 8,
+  uniqueContracts: 58,
+  transactions: 1200,
+  activeDays: 75,
   lastIndexedBlock: 1289402
 };
 
@@ -822,7 +902,7 @@ export const demoDiscordActivity: DiscordActivity = {
   username: "ritual_builder",
   serverId: "ritual-discord-demo",
   messages: 42,
-  roles: ["Bitty"],
+  roles: ["Bitty", "Ritty", "Ritualist", "Mage"],
   connectedWallet: demoPassport.wallet
 };
 
