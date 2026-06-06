@@ -96,6 +96,27 @@ export interface DiscordActivity {
   connectedWallet?: string;
 }
 
+export interface IdentityLink {
+  wallet: string;
+  passportTokenId: number;
+  discordId: string;
+  discordUsername: string;
+  discordAvatarUrl?: string;
+}
+
+export interface VerifiedRitualProduct {
+  id: string;
+  name: string;
+  builderWallet: string;
+  category: "Agent" | "Dashboard" | "Template" | "Protocol" | "Tool";
+  description: string;
+  url: string;
+  repositoryUrl?: string;
+  approvedAt: string;
+  verificationBadge: "Backend approved" | "Security reviewed" | "Community verified";
+  tags: string[];
+}
+
 export const builderClasses: BuilderClass[] = [
   {
     id: 1,
@@ -906,11 +927,96 @@ export const demoDiscordActivity: DiscordActivity = {
   connectedWallet: demoPassport.wallet
 };
 
-export const leaderboard = [
-  { wallet: "0x9f7E...18B2", className: "Agent Smith", reputation: 88, level: 31 },
-  { wallet: "0xA5C3...8124", className: "Builder", reputation: calculateReputation(demoPassport), level: getLevel(demoPassport.xp) },
-  { wallet: "0x71Ca...D447", className: "Analyst", reputation: 37, level: 12 },
-  { wallet: "0x45a1...F902", className: "Creator", reputation: 29, level: 9 }
+export const demoIdentityLink: IdentityLink = {
+  wallet: demoPassport.wallet,
+  passportTokenId: demoPassport.tokenId,
+  discordId: demoDiscordActivity.discordId,
+  discordUsername: demoDiscordActivity.username,
+  discordAvatarUrl: "https://cdn.discordapp.com/embed/avatars/0.png"
+};
+
+export const builderLeaderboard = [
+  { wallet: "0x9f7E...18B2", className: "Agent Smith", reputation: 88, level: 31, builderXp: 18100 },
+  { wallet: "0xA5C3...8124", className: "Builder", reputation: calculateReputation(demoPassport), level: getLevel(demoPassport.xp), builderXp: 3450 },
+  { wallet: "0x71Ca...D447", className: "Analyst", reputation: 37, level: 12, builderXp: 2900 },
+  { wallet: "0x45a1...F902", className: "Creator", reputation: 29, level: 9, builderXp: 2100 }
+];
+
+export const leaderboard = builderLeaderboard;
+
+export const verifiedRitualProducts: VerifiedRitualProduct[] = [
+  {
+    id: "ritual-agent-foundry",
+    name: "Ritual Agent Foundry",
+    builderWallet: "0x9f7E...18B2",
+    category: "Agent",
+    description: "A scheduler for launching autonomous Ritual testnet agents with reusable run templates.",
+    url: "https://example.com/ritual-agent-foundry",
+    repositoryUrl: "https://github.com/example/ritual-agent-foundry",
+    approvedAt: "2026-06-02",
+    verificationBadge: "Backend approved",
+    tags: ["agents", "automation", "templates"]
+  },
+  {
+    id: "infernet-observatory",
+    name: "Infernet Observatory",
+    builderWallet: "0x71Ca...D447",
+    category: "Dashboard",
+    description: "A public analytics surface for tracking Infernet jobs, contract calls, and builder activity.",
+    url: "https://example.com/infernet-observatory",
+    repositoryUrl: "https://github.com/example/infernet-observatory",
+    approvedAt: "2026-05-29",
+    verificationBadge: "Community verified",
+    tags: ["analytics", "infernet", "dashboard"]
+  },
+  {
+    id: "ritual-llm-starter",
+    name: "Ritual LLM Starter",
+    builderWallet: "0xA5C3...8124",
+    category: "Template",
+    description: "A starter repository for calling Ritual AI primitives from contracts and a Next.js frontend.",
+    url: "https://example.com/ritual-llm-starter",
+    repositoryUrl: "https://github.com/example/ritual-llm-starter",
+    approvedAt: "2026-05-21",
+    verificationBadge: "Security reviewed",
+    tags: ["llm", "starter", "frontend"]
+  },
+  {
+    id: "ritual-swap-console",
+    name: "Ritual Swap Console",
+    builderWallet: "0x45a1...F902",
+    category: "Tool",
+    description: "A guided interface for testnet swaps, contract approvals, and transaction inspection on Ritual.",
+    url: "https://example.com/ritual-swap-console",
+    repositoryUrl: "https://github.com/example/ritual-swap-console",
+    approvedAt: "2026-05-18",
+    verificationBadge: "Backend approved",
+    tags: ["wallet", "transactions", "testnet"]
+  },
+  {
+    id: "ritual-name-kit",
+    name: "Ritual Name Kit",
+    builderWallet: "0x52Bd...91AF",
+    category: "Protocol",
+    description: "A lightweight naming and profile primitive for users who want readable identities on Ritual.",
+    url: "https://example.com/ritual-name-kit",
+    repositoryUrl: "https://github.com/example/ritual-name-kit",
+    approvedAt: "2026-05-12",
+    verificationBadge: "Security reviewed",
+    tags: ["identity", "profiles", "contracts"]
+  },
+  {
+    id: "ritual-gas-lens",
+    name: "Ritual Gas Lens",
+    builderWallet: "0x8c13...7D21",
+    category: "Dashboard",
+    description: "A user-facing dashboard for checking network health, gas patterns, and recent Ritual activity.",
+    url: "https://example.com/ritual-gas-lens",
+    repositoryUrl: "https://github.com/example/ritual-gas-lens",
+    approvedAt: "2026-05-08",
+    verificationBadge: "Community verified",
+    tags: ["network", "gas", "activity"]
+  }
 ];
 
 export function getBuilderClass(id: BuilderClassId): BuilderClass {

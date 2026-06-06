@@ -37,8 +37,11 @@ export default function LeaderboardPage() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="fade-in">
-        <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Leaderboard</p>
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Builder rankings</p>
         <h1 className="mt-2 text-4xl font-semibold">Top Ritual builders.</h1>
+        <p className="mt-3 max-w-2xl leading-7 text-muted">
+          Ranking is calculated from builder tasks only. Tester milestones and Discord tasks still progress the passport, but they do not affect this board.
+        </p>
       </div>
 
       <section className="mt-7 grid items-end gap-4 md:grid-cols-3">
@@ -67,6 +70,7 @@ export default function LeaderboardPage() {
                     <p className="text-sm text-white/65">
                       {builder.className} - Level {builder.level}
                     </p>
+                    {builder.builderXp ? <p className="text-sm text-white/65">{builder.builderXp} builder XP</p> : null}
                     <p className="mt-3 font-mono text-3xl text-green">{builder.reputation} REP</p>
                   </div>
                 </div>
@@ -94,6 +98,7 @@ export default function LeaderboardPage() {
               <div>
                 <p className="font-mono text-sm">{builder.wallet}</p>
                 <p className="text-sm text-muted">{builder.className}</p>
+                {builder.builderXp ? <p className="text-xs text-muted">{builder.builderXp} builder XP</p> : null}
               </div>
               <p className="font-mono text-sm text-muted">LVL {builder.level}</p>
               <p className="text-right font-mono text-2xl text-green">{builder.reputation}</p>

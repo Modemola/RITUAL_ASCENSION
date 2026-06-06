@@ -1,10 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
-import { apiClient } from "./api";
+import React, { createContext, useContext, useState, useCallback } from "react";
+import { apiClient, IdentityLink } from "./api";
 
 interface UserSession {
   wallet: string | null;
+  identityLink: IdentityLink | null;
   passport: any | null;
   profile: any | null;
   isConnected: boolean;
@@ -12,7 +13,9 @@ interface UserSession {
 }
 
 interface RitualContextType extends UserSession {
-  connectWallet: (wallet: string) => Promise<void>;
+  connectWallet: (wallet: string, signature: string) => Promise<void>;
+  mintPassport: (classId: number, mintSignature: string) => Promise<void>;
+  connectDiscord: (discordId: string, username: string) => Promise<IdentityLink>;
   disconnectWallet: () => void;
   fetchUserData: (wallet: string) => Promise<void>;
   clearError: () => void;
@@ -24,6 +27,7 @@ const RitualContext = createContext<RitualContextType | undefined>(undefined);
 export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<UserSession>({
     wallet: null,
+    identityLink: null,
     passport: null,
     profile: null,
     isConnected: false,
@@ -31,15 +35,7 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
   const [error, setError] = useState<string | null>(null);
 
-  // Load wallet from localStorage on mount
-  useEffect(() => {
-    const savedWallet = localStorage.getItem("ritual_wallet");
-    if (savedWallet) {
-      connectWallet(savedWallet);
-    }
-  }, []);
-
-  const connectWallet = useCallback(async (wallet: string) => {
+  const connectWallet = useCallback(async (wallet: string, signature: string) => {
     setSession((s) => ({ ...s, isLoading: true }));
     setError(null);
 
@@ -49,16 +45,23 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         throw new Error("Invalid wallet address format");
       }
 
-      // Store wallet
-      localStorage.setItem("ritual_wallet", wallet);
+      if (!signature) {
+        throw new Error("Wallet signature is required to connect");
+      }
+
       setSession((s) => ({
         ...s,
         wallet,
         isConnected: true,
       }));
 
-      // Fetch user data
-      await fetchUserData(wallet);
+      setSession((s) => ({
+        ...s,
+        passport: null,
+        profile: null,
+        identityLink: null,
+        isLoading: false,
+      }));
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Failed to connect wallet";
       setError(errorMsg);
@@ -77,6 +80,7 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         ...s,
         passport: passportRes.data?.passport ?? null,
         profile: profileRes.data?.profile ?? null,
+        identityLink: profileRes.data?.profile.identityLink ?? null,
         isLoading: false,
       }));
     } catch (err) {
@@ -86,10 +90,86 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
+  const mintPassport = useCallback(async (classId: number, mintSignature: string) => {
+    if (!session.wallet) {
+      throw new Error("Connect your wallet before minting");
+    }
+
+    if (!mintSignature) {
+      throw new Error("Wallet mint signature is required");
+    }
+
+    setSession((s) => ({ ...s, isLoading: true }));
+
+    try {
+      const tokenId = Math.floor(Date.now() / 1000);
+      const passport = {
+        wallet: session.wallet,
+        tokenId,
+        classId,
+        xp: 0,
+        stage: 1,
+        reputation: 0,
+        level: 1,
+        levelProgress: { level: 1, percent: 0, nextXp: 500 },
+      };
+
+      setSession((s) => ({
+        ...s,
+        passport,
+        profile: {
+          wallet: session.wallet,
+          passport,
+          achievements: [],
+          completedQuests: [],
+          identityLink: null,
+        },
+        identityLink: null,
+        isLoading: false,
+      }));
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to mint passport";
+      setError(errorMsg);
+      setSession((s) => ({ ...s, isLoading: false }));
+      throw err;
+    }
+  }, [session.wallet]);
+
+  const connectDiscord = useCallback(async (discordId: string, username: string) => {
+    if (!session.wallet) {
+      throw new Error("Connect your passport wallet before linking Discord");
+    }
+
+    if (session.identityLink && session.identityLink.discordId !== discordId) {
+      throw new Error("This passport already has one Discord account linked");
+    }
+
+    const response = await apiClient.connectDiscord(session.wallet, discordId, username);
+    if (response.error || !response.data) {
+      throw new Error(response.error || "Failed to connect Discord");
+    }
+
+    const identityLink: IdentityLink = {
+      wallet: response.data.discord.connectedWallet ?? session.wallet,
+      passportTokenId: session.passport?.tokenId ?? 0,
+      discordId: response.data.discord.discordId,
+      discordUsername: response.data.discord.username,
+      discordAvatarUrl: response.data.discord.avatarUrl,
+    };
+
+    setSession((s) => ({
+      ...s,
+      identityLink,
+      profile: s.profile ? { ...s.profile, identityLink } : s.profile,
+    }));
+
+    return identityLink;
+  }, [session.identityLink, session.passport?.tokenId, session.wallet]);
+
   const disconnectWallet = useCallback(() => {
-    localStorage.removeItem("ritual_wallet");
     setSession({
       wallet: null,
+      identityLink: null,
       passport: null,
       profile: null,
       isConnected: false,
@@ -103,6 +183,8 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const value: RitualContextType = {
     ...session,
     connectWallet,
+    mintPassport,
+    connectDiscord,
     disconnectWallet,
     fetchUserData,
     clearError,

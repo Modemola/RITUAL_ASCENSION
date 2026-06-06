@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Bot, CircleGauge, HelpCircle, ShieldCheck, Sparkles, Trophy, Wallet } from "lucide-react";
-import { appProgress, appReputation, appTier, builderClasses, evolutionStages, leaderboard, quests } from "@/lib/data";
+import { ArrowRight, BadgeCheck, Bot, CircleGauge, ExternalLink, HelpCircle, ShieldCheck, Sparkles, Trophy, Wallet } from "lucide-react";
+import { appProgress, appReputation, appTier, builderClasses, evolutionStages, leaderboard, quests, verifiedRitualProducts } from "@/lib/data";
 
 const features = [
   { icon: ShieldCheck, title: "Soulbound identity", text: "A non-transferable builder passport that binds class, stage, XP, and reputation to one wallet." },
   { icon: Bot, title: "Oracle guidance", text: "AI mentorship shaped by your class, unlocked achievements, completed quests, and available Ritual actions." },
   { icon: CircleGauge, title: "Progression engine", text: "Segmented XP, level tiers, verifiable proofs, and evolution triggers that make every action visible." },
-  { icon: Trophy, title: "Public standing", text: "Leaderboard and profile surfaces that turn building into reputation across the Ritual ecosystem." }
+  { icon: Trophy, title: "Builder ranking", text: "Rankings only count builder tasks, keeping tester and Discord progress out of competitive standing." }
 ];
 
 const faqs = [
@@ -15,10 +15,19 @@ const faqs = [
   ["What evolves the Passport?", "Milestones like first deployment, LLM precompile use, full projects, and high reputation."]
 ];
 
+const productRail = [...verifiedRitualProducts, ...verifiedRitualProducts];
+
 export default function LandingPage() {
   return (
     <main>
       <section className="relative overflow-hidden border-b border-cyan/15">
+        <div className="identity-flow pointer-events-none absolute inset-x-0 top-8 mx-auto hidden h-40 max-w-5xl md:block" aria-hidden="true">
+          <span className="flow-node left-[6%] top-10">WALLET</span>
+          <span className="flow-node left-[42%] top-2">SBT</span>
+          <span className="flow-node right-[6%] top-10">DISCORD</span>
+          <span className="flow-packet packet-a" />
+          <span className="flow-packet packet-b" />
+        </div>
         <div className="mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_0.92fr] lg:items-center">
           <div className="space-y-7 fade-in">
             <div className="inline-flex items-center gap-2 border border-cyan/20 bg-cyan/5 px-3 py-2 font-mono text-xs text-cyan shadow-rune fade-in-delay-1">
@@ -30,7 +39,7 @@ export default function LandingPage() {
                 Mint Your Soulbound Identity.
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-muted">
-                Ritual Ascension turns a wallet into a living builder passport: class, quests, XP, achievements, evolution, Oracle mentorship, and public reputation.
+                Ritual Ascension turns one connected wallet and one linked Discord into a living builder passport: class, quests, XP, achievements, evolution, Oracle mentorship, and builder-only reputation.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row fade-in-delay-3">
@@ -143,10 +152,58 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="border-b border-cyan/15 py-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Verified Ritual products</p>
+              <h2 className="mt-3 text-3xl font-semibold">Approved products for using Ritual.</h2>
+              <p className="mt-3 max-w-2xl leading-7 text-muted">
+                When a submitted Ritual product is reviewed and approved by the backend, it appears here so users can discover tools, apps, and protocols that help them interact with the Ritual blockchain.
+              </p>
+            </div>
+            <Link href="/quests/full-project" className="inline-flex items-center gap-2 border border-cyan/20 px-4 py-3 text-sm font-semibold text-cyan hover:border-cyan/55 hover-lift">
+              Submit a product <ArrowRight className="size-4" />
+            </Link>
+          </div>
+          <div className="product-rail mt-7 overflow-hidden">
+            <div className="product-track flex w-max gap-4">
+              {productRail.map((product, index) => (
+                <article key={`${product.id}-${index}`} className="rune-panel flex min-h-80 w-[min(82vw,360px)] shrink-0 flex-col justify-between p-5 hover-lift">
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="border border-cyan/20 px-2 py-1 font-mono text-xs text-cyan">{product.category}</span>
+                      <span className="inline-flex items-center gap-1 border border-green/30 bg-green/10 px-2 py-1 text-xs text-green">
+                        <BadgeCheck className="size-3" />
+                        {product.verificationBadge}
+                      </span>
+                    </div>
+                    <h3 className="mt-5 text-xl font-semibold">{product.name}</h3>
+                    <p className="mt-3 text-sm leading-6 text-muted">{product.description}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {product.tags.map((tag) => (
+                        <span key={tag} className="border border-white/10 bg-white/5 px-2 py-1 text-xs text-muted">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mt-5 border-t border-cyan/10 pt-4">
+                    <p className="font-mono text-xs text-muted">APPROVED {product.approvedAt}</p>
+                    <Link href={product.url} className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-cyan hover:text-aqua">
+                      Open product <ExternalLink className="size-4" />
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="py-14">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_0.8fr]">
           <div>
-            <h2 className="text-3xl font-semibold">Live leaderboard preview</h2>
+            <h2 className="text-3xl font-semibold">Builder task rankings</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">Only builder quests affect this ranking. Tester milestones and Discord roles still grant progression, but they do not move this board.</p>
             <div className="mt-5 overflow-hidden border border-cyan/15 bg-panel/60">
               {leaderboard.map((builder, index) => (
                 <div key={builder.wallet} className="grid grid-cols-[52px_1fr_90px] items-center border-b border-cyan/10 px-4 py-3 last:border-b-0">

@@ -4,18 +4,27 @@ import {
   builderClasses,
   calculateReputation,
   demoDiscordActivity,
+  demoIdentityLink,
   demoPassport,
   demoTestnetActivity,
   evolutionStages,
+  verifiedRitualProducts,
   getBuilderClass,
   getQuest,
   getLevelProgress,
-  leaderboard,
+  builderLeaderboard,
   questCategories,
   quests
 } from "@ritual/domain";
 
 const port = Number(process.env.PORT ?? 4000);
+const walletPattern = /^0x[a-fA-F0-9]{40}$/;
+const identityLinksByWallet = new Map<string, typeof demoIdentityLink>([
+  [demoIdentityLink.wallet.toLowerCase(), demoIdentityLink]
+]);
+const walletByDiscordId = new Map<string, string>([
+  [demoIdentityLink.discordId, demoIdentityLink.wallet.toLowerCase()]
+]);
 
 function json(response: import("node:http").ServerResponse, statusCode: number, body: unknown) {
   response.writeHead(statusCode, {
@@ -51,6 +60,24 @@ async function readBody(request: import("node:http").IncomingMessage) {
   }
 }
 
+function normalizeWallet(wallet?: string) {
+  return typeof wallet === "string" && walletPattern.test(wallet) ? wallet.toLowerCase() : null;
+}
+
+function getIdentityLink(wallet?: string) {
+  const normalizedWallet = normalizeWallet(wallet);
+  return normalizedWallet ? identityLinksByWallet.get(normalizedWallet) : undefined;
+}
+
+function isLinkedWallet(wallet?: string) {
+  return normalizeWallet(wallet) !== null;
+}
+
+function isLinkedDiscord(wallet?: string, discordId?: string) {
+  const identityLink = getIdentityLink(wallet);
+  return Boolean(identityLink && discordId === identityLink.discordId);
+}
+
 function verifyQuest(questId: string, wallet?: string, discordId?: string) {
   const quest = getQuest(questId);
   if (!quest) {
@@ -58,7 +85,12 @@ function verifyQuest(questId: string, wallet?: string, discordId?: string) {
   }
 
   if (quest.category === "testers") {
-    if (!wallet) return { ok: false, reason: "Wallet is required for Ritual testnet verification" };
+    if (!isLinkedWallet(wallet)) {
+      return {
+        ok: false,
+        reason: "Verification only checks the wallet linked to this Soulbound Passport"
+      };
+    }
 
     const value = quest.metric ? Number(demoTestnetActivity[quest.metric as keyof typeof demoTestnetActivity] ?? 0) : 0;
     const required = quest.target ?? 0;
@@ -77,7 +109,19 @@ function verifyQuest(questId: string, wallet?: string, discordId?: string) {
   }
 
   if (quest.category === "discord") {
-    if (!discordId) return { ok: false, reason: "Discord account is required for Discord verification" };
+    if (!isLinkedWallet(wallet)) {
+      return {
+        ok: false,
+        reason: "Connect the passport wallet before Discord verification"
+      };
+    }
+
+    if (!isLinkedDiscord(wallet, discordId)) {
+      return {
+        ok: false,
+        reason: "Verification only checks the Discord account linked to this Soulbound Passport"
+      };
+    }
 
     if (quest.verification === "DISCORD_ROLE") {
       const hasRole = quest.roleName ? demoDiscordActivity.roles.includes(quest.roleName) : false;
@@ -100,6 +144,13 @@ function verifyQuest(questId: string, wallet?: string, discordId?: string) {
       source: "ritual-discord-bot",
       value: demoDiscordActivity.messages,
       required
+    };
+  }
+
+  if (!isLinkedWallet(wallet)) {
+    return {
+      ok: false,
+      reason: "Builder quest verification only accepts proof from the linked passport wallet"
     };
   }
 
@@ -160,6 +211,14 @@ const server = createServer(async (request, response) => {
 
   if (url.pathname === "/api/testnet/activity") {
     const wallet = url.searchParams.get("wallet") ?? demoTestnetActivity.wallet;
+    if (!isLinkedWallet(wallet)) {
+      json(response, 403, {
+        error: "IdentityMismatch",
+        message: "Only the wallet linked to the Soulbound Passport can be checked"
+      });
+      return;
+    }
+
     json(response, 200, {
       activity: {
         ...demoTestnetActivity,
@@ -172,6 +231,14 @@ const server = createServer(async (request, response) => {
 
   if (url.pathname === "/api/discord/activity") {
     const discordId = url.searchParams.get("discordId") ?? demoDiscordActivity.discordId;
+    if (discordId && !Array.from(identityLinksByWallet.values()).some((link) => link.discordId === discordId)) {
+      json(response, 403, {
+        error: "IdentityMismatch",
+        message: "Only the Discord account linked to the Soulbound Passport can be checked"
+      });
+      return;
+    }
+
     json(response, 200, {
       activity: {
         ...demoDiscordActivity,
@@ -183,12 +250,57 @@ const server = createServer(async (request, response) => {
 
   if (url.pathname === "/api/discord/connect" && request.method === "POST") {
     const body = await readBody(request) as { wallet?: string; discordId?: string; username?: string };
+    if (!isLinkedWallet(body.wallet)) {
+      json(response, 403, {
+        error: "IdentityMismatch",
+        message: "Discord can only be linked from the passport wallet"
+      });
+      return;
+    }
+
+    const normalizedWallet = normalizeWallet(body.wallet);
+    if (!normalizedWallet) {
+      json(response, 400, {
+        error: "InvalidWallet",
+        message: "A valid passport wallet is required"
+      });
+      return;
+    }
+
+    const existingIdentity = identityLinksByWallet.get(normalizedWallet);
+    if (existingIdentity && body.discordId && body.discordId !== existingIdentity.discordId) {
+      json(response, 409, {
+        error: "DiscordAlreadyLinked",
+        message: "This Soulbound Passport already has one Discord account linked"
+      });
+      return;
+    }
+
+    if (body.discordId && walletByDiscordId.has(body.discordId) && walletByDiscordId.get(body.discordId) !== normalizedWallet) {
+      json(response, 409, {
+        error: "DiscordAlreadyClaimed",
+        message: "This Discord account is already linked to another passport wallet"
+      });
+      return;
+    }
+
+    const identityLink = existingIdentity ?? {
+      wallet: body.wallet ?? normalizedWallet,
+      passportTokenId: demoPassport.tokenId,
+      discordId: body.discordId || demoIdentityLink.discordId,
+      discordUsername: body.username || demoIdentityLink.discordUsername,
+      discordAvatarUrl: demoIdentityLink.discordAvatarUrl
+    };
+    identityLinksByWallet.set(normalizedWallet, identityLink);
+    walletByDiscordId.set(identityLink.discordId, normalizedWallet);
+
     json(response, 200, {
       discord: {
         ...demoDiscordActivity,
-        connectedWallet: body.wallet ?? demoDiscordActivity.connectedWallet,
-        discordId: body.discordId ?? demoDiscordActivity.discordId,
-        username: body.username ?? demoDiscordActivity.username
+        connectedWallet: identityLink.wallet,
+        discordId: identityLink.discordId,
+        username: identityLink.discordUsername,
+        avatarUrl: identityLink.discordAvatarUrl
       }
     });
     return;
@@ -207,7 +319,18 @@ const server = createServer(async (request, response) => {
   }
 
   if (url.pathname === "/api/leaderboard") {
-    json(response, 200, { builders: leaderboard });
+    json(response, 200, {
+      scope: "builder_tasks_only",
+      builders: builderLeaderboard
+    });
+    return;
+  }
+
+  if (url.pathname === "/api/products/verified") {
+    json(response, 200, {
+      products: verifiedRitualProducts,
+      total: verifiedRitualProducts.length
+    });
     return;
   }
 
@@ -229,6 +352,7 @@ const server = createServer(async (request, response) => {
 
   const profileMatch = url.pathname.match(/^\/api\/profile\/([^/]+)$/);
   if (profileMatch) {
+    const profileIdentityLink = getIdentityLink(profileMatch[1]);
     json(response, 200, {
       profile: {
         wallet: profileMatch[1],
@@ -238,7 +362,8 @@ const server = createServer(async (request, response) => {
         achievements: achievements.filter((achievement) => achievement.unlocked),
         completedQuests: quests.filter((quest) => demoPassport.completedQuestIds.includes(quest.id)),
         testnetActivity: demoTestnetActivity,
-        discordActivity: demoDiscordActivity
+        discordActivity: demoDiscordActivity,
+        identityLink: profileIdentityLink ?? null
       }
     });
     return;

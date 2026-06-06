@@ -94,3 +94,52 @@ export async function requestWalletAddress(wallet: BrowserWallet): Promise<strin
 
   return accounts[0];
 }
+
+export async function requestWalletSignature(wallet: BrowserWallet, address: string): Promise<string> {
+  const issuedAt = new Date().toISOString();
+  const message = [
+    "Ritual Ascension wallet verification",
+    "",
+    "Sign this message to connect your wallet for this session.",
+    "This does not approve a transaction or spend funds.",
+    "",
+    `Wallet: ${address}`,
+    `Issued At: ${issuedAt}`
+  ].join("\n");
+
+  const signature = await wallet.provider.request({
+    method: "personal_sign",
+    params: [message, address]
+  });
+
+  if (typeof signature !== "string" || !signature) {
+    throw new Error("Wallet signature was not returned");
+  }
+
+  return signature;
+}
+
+export async function requestMintSignature(wallet: BrowserWallet, address: string, className: string): Promise<string> {
+  const issuedAt = new Date().toISOString();
+  const message = [
+    "Ritual Ascension passport mint",
+    "",
+    "Sign this message to mint your Soulbound Passport in this demo flow.",
+    "Production will replace this with PassportNFT.mintPassport.",
+    "",
+    `Wallet: ${address}`,
+    `Class: ${className}`,
+    `Issued At: ${issuedAt}`
+  ].join("\n");
+
+  const signature = await wallet.provider.request({
+    method: "personal_sign",
+    params: [message, address]
+  });
+
+  if (typeof signature !== "string" || !signature) {
+    throw new Error("Mint signature was not returned");
+  }
+
+  return signature;
+}

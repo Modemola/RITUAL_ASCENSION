@@ -71,6 +71,58 @@ textarea {
   background: linear-gradient(90deg, transparent, rgba(0, 245, 212, 0.85), transparent);
 }
 
+.identity-flow {
+  background:
+    linear-gradient(90deg, transparent 4%, rgba(0, 245, 212, 0.34) 20%, rgba(255, 255, 255, 0.12) 50%, rgba(0, 245, 212, 0.34) 80%, transparent 96%);
+  mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+}
+
+.identity-flow::before,
+.identity-flow::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 70px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 245, 212, 0.72), rgba(103, 232, 249, 0.25), rgba(0, 245, 212, 0.72), transparent);
+}
+
+.identity-flow::after {
+  top: 88px;
+  opacity: 0.45;
+}
+
+.flow-node {
+  position: absolute;
+  border: 1px solid rgba(0, 245, 212, 0.28);
+  background: rgba(10, 10, 10, 0.72);
+  padding: 0.55rem 0.75rem;
+  color: #67e8f9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  box-shadow: 0 0 20px rgba(0, 245, 212, 0.18);
+}
+
+.flow-packet {
+  position: absolute;
+  top: 66px;
+  left: 14%;
+  width: 86px;
+  height: 9px;
+  background: linear-gradient(90deg, transparent, #00f5d4, #67e8f9, transparent);
+  filter: drop-shadow(0 0 12px rgba(0, 245, 212, 0.9));
+}
+
+.product-rail {
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+
+.product-track {
+  will-change: transform;
+}
+
 /* ===== ANIMATION UTILITIES ===== */
 @media (prefers-reduced-motion: no-preference) {
   /* Existing animations */
@@ -197,6 +249,22 @@ textarea {
 
   .pulse-subtle {
     animation: pulse-subtle 2s ease-in-out infinite;
+  }
+
+  .packet-a {
+    animation: flow-packet 4.8s linear infinite;
+  }
+
+  .packet-b {
+    animation: flow-packet 4.8s linear 2.4s infinite;
+  }
+
+  .product-track {
+    animation: product-marquee 34s linear infinite;
+  }
+
+  .product-rail:hover .product-track {
+    animation-play-state: paused;
   }
 
   /* Hover & Interactive */
@@ -434,5 +502,31 @@ textarea {
   }
   50% {
     opacity: 1;
+  }
+}
+
+@keyframes flow-packet {
+  0% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(690px);
+  }
+}
+
+@keyframes product-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-50% - 0.5rem));
   }
 }

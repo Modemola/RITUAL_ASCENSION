@@ -27,6 +27,7 @@ export interface ProfileData {
     passport: any;
     achievements: any[];
     completedQuests: any[];
+    identityLink?: IdentityLink | null;
   };
 }
 
@@ -44,10 +45,38 @@ export interface LeaderboardEntry {
   className: string;
   level: number;
   reputation: number;
+  builderXp?: number;
 }
 
 export interface LeaderboardData {
+  scope?: "builder_tasks_only";
   builders: LeaderboardEntry[];
+}
+
+export interface IdentityLink {
+  wallet: string;
+  passportTokenId: number;
+  discordId: string;
+  discordUsername: string;
+  discordAvatarUrl?: string;
+}
+
+export interface VerifiedRitualProduct {
+  id: string;
+  name: string;
+  builderWallet: string;
+  category: "Agent" | "Dashboard" | "Template" | "Protocol" | "Tool";
+  description: string;
+  url: string;
+  repositoryUrl?: string;
+  approvedAt: string;
+  verificationBadge: "Backend approved" | "Security reviewed" | "Community verified";
+  tags: string[];
+}
+
+export interface VerifiedProductsData {
+  products: VerifiedRitualProduct[];
+  total: number;
 }
 
 export interface QuestData {
@@ -83,6 +112,7 @@ export interface DiscordActivityData {
     messages: number;
     roles: string[];
     connectedWallet?: string;
+    avatarUrl?: string;
   };
 }
 
@@ -162,6 +192,9 @@ export const apiClient = {
 
   // Get leaderboard
   getLeaderboard: () => apiFetch<LeaderboardData>(`/api/leaderboard`),
+
+  // Verified Ritual products approved by backend review
+  getVerifiedProducts: () => apiFetch<VerifiedProductsData>(`/api/products/verified`),
 
   // Get builder classes
   getClasses: () => apiFetch(`/api/classes`),

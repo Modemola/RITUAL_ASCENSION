@@ -1,5 +1,19 @@
 import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
+
+const networks: HardhatUserConfig["networks"] = {
+  hardhat: {
+    type: "edr-simulated"
+  }
+};
+
+if (process.env.RITUAL_RPC_URL) {
+  networks.ritualTestnet = {
+    type: "http",
+    url: process.env.RITUAL_RPC_URL,
+    chainId: Number(process.env.RITUAL_CHAIN_ID ?? 0),
+    accounts: process.env.BACKEND_OPERATOR_PRIVATE_KEY ? [process.env.BACKEND_OPERATOR_PRIVATE_KEY] : []
+  };
+}
 
 const config: HardhatUserConfig = {
   paths: {
@@ -18,14 +32,7 @@ const config: HardhatUserConfig = {
       }
     }
   },
-  networks: {
-    hardhat: {},
-    ritualTestnet: {
-      url: process.env.RITUAL_RPC_URL ?? "",
-      chainId: Number(process.env.RITUAL_CHAIN_ID ?? 0),
-      accounts: process.env.BACKEND_OPERATOR_PRIVATE_KEY ? [process.env.BACKEND_OPERATOR_PRIVATE_KEY] : []
-    }
-  }
+  networks
 };
 
 export default config;

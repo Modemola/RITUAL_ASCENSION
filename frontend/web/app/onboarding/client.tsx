@@ -1,29 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { Check, RefreshCw, Wallet } from "lucide-react";
+import { Check, RefreshCw, ShieldCheck, Wallet } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { builderClasses } from "@/lib/data";
 import { useRitual } from "@/lib/store";
-import { useForm } from "@/lib/hooks";
 import { LoadingSpinner, Toast, Modal } from "@/lib/components";
-import { BrowserWallet, discoverBrowserWallets, requestWalletAddress } from "@/lib/wallets";
+import { BrowserWallet, discoverBrowserWallets, requestMintSignature, requestWalletAddress, requestWalletSignature } from "@/lib/wallets";
 
 export const OnboardingClient = () => {
-  const { connectWallet, isLoading, error: storeError } = useRitual();
+  const router = useRouter();
+  const { wallet, connectWallet, mintPassport, isConnected, passport, isLoading, error: storeError } = useRitual();
   const [selectedClass, setSelectedClass] = useState(1);
+  const [activeStep, setActiveStep] = useState<"class" | "mint">("class");
+  const [connectedBrowserWallet, setConnectedBrowserWallet] = useState<BrowserWallet | null>(null);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [wallets, setWallets] = useState<BrowserWallet[]>([]);
   const [isDiscoveringWallets, setIsDiscoveringWallets] = useState(false);
   const [walletPickerError, setWalletPickerError] = useState("");
-
-  const form = useForm(
-    { wallet: "" },
-    async (values) => {
-      await connectWallet(values.wallet);
-      setShowWalletModal(false);
-    }
-  );
+  const [mintError, setMintError] = useState("");
 
   const refreshWallets = async () => {
     setIsDiscoveringWallets(true);
@@ -50,10 +46,40 @@ export const OnboardingClient = () => {
     setWalletPickerError("");
     try {
       const address = await requestWalletAddress(browserWallet);
-      await connectWallet(address);
+      const signature = await requestWalletSignature(browserWallet, address);
+      await connectWallet(address, signature);
+      setConnectedBrowserWallet(browserWallet);
       setShowWalletModal(false);
     } catch (error) {
       setWalletPickerError(error instanceof Error ? error.message : "Wallet connection failed");
+    }
+  };
+
+  const selectedClassData = builderClasses.find((c) => c.id === selectedClass) ?? builderClasses[0];
+
+  const handlePrepareMint = () => {
+    setMintError("");
+    if (!isConnected) {
+      setMintError("Connect and sign with your wallet before minting.");
+      return;
+    }
+
+    setActiveStep("mint");
+  };
+
+  const handleMintPassport = async () => {
+    setMintError("");
+    if (!wallet || !connectedBrowserWallet) {
+      setMintError("Reconnect your wallet so the mint signature can be requested.");
+      return;
+    }
+
+    try {
+      const mintSignature = await requestMintSignature(connectedBrowserWallet, wallet, selectedClassData.name);
+      await mintPassport(selectedClass, mintSignature);
+      router.push("/dashboard");
+    } catch (error) {
+      setMintError(error instanceof Error ? error.message : "Mint signature failed");
     }
   };
 
@@ -83,7 +109,7 @@ export const OnboardingClient = () => {
             Mint your Soulbound Passport.
           </h1>
           <p className="mt-4 leading-7 text-muted">
-            Connect a wallet, select a permanent class, then send the mint transaction. Production will wire this into Wagmi, SIWE, and PassportNFT.mintPassport.
+            Connect and sign with the wallet that will own your Soulbound Passport, select a permanent class, then send the mint transaction. That same wallet becomes the only wallet checked for task verification.
           </p>
           <button
             onClick={openWalletModal}
@@ -110,6 +136,35 @@ export const OnboardingClient = () => {
           </div>
         </section>
 
+        {isConnected && passport ? (
+          <section className="rune-panel flex min-h-80 flex-col justify-between p-6 fade-in-delay-2">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Passport already minted</p>
+              <h2 className="mt-3 text-3xl font-semibold">This wallet has completed onboarding.</h2>
+              <p className="mt-3 leading-7 text-muted">
+                Onboarding only happens once per wallet. Future visits require a fresh wallet signature, then the existing Soulbound Passport is loaded for this wallet.
+              </p>
+            </div>
+            <div className="mt-6 grid gap-3 border border-cyan/10 bg-black/20 p-4 font-mono text-sm">
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">Passport token</span>
+                <span className="text-cyan">#{passport.tokenId}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">Stage</span>
+                <span>{passport.stage}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">XP</span>
+                <span>{passport.xp}</span>
+              </div>
+            </div>
+            <Link href="/dashboard" className="rune-button mt-6 inline-flex items-center justify-center px-4 py-3 font-semibold button-press hover-lift">
+              Open Dashboard
+            </Link>
+          </section>
+        ) : (
+        activeStep === "class" ? (
         <section className="grid gap-3 md:grid-cols-2">
           {builderClasses.map((builderClass, i) => (
             <article
@@ -137,14 +192,66 @@ export const OnboardingClient = () => {
               </p>
             </article>
           ))}
-          {/* Mint Button */}
-          <Link
-            href="/dashboard"
+          <button
+            type="button"
+            onClick={handlePrepareMint}
             className="rune-button inline-flex items-center justify-center px-4 py-3 font-semibold button-press hover-lift md:col-span-2"
           >
             Continue with {builderClasses.find((c) => c.id === selectedClass)?.name}
-          </Link>
+          </button>
         </section>
+        ) : (
+          <section className="rune-panel p-6 fade-in-delay-2">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Mint Soulbound Passport</p>
+                <h2 className="mt-3 text-3xl font-semibold">Review the token details.</h2>
+              </div>
+              <ShieldCheck className="size-7 text-green" />
+            </div>
+            <p className="mt-3 leading-7 text-muted">
+              This is the final onboarding step. Your wallet will be asked to sign the mint confirmation, then your Soulbound Passport will unlock the dashboard.
+            </p>
+            <div className="mt-6 grid gap-3 border border-cyan/10 bg-black/20 p-4 font-mono text-sm">
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">Wallet</span>
+                <span className="break-all text-right text-cyan">{wallet}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">Class</span>
+                <span>{selectedClassData.name}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">Initial stage</span>
+                <span>Genesis</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">Transferability</span>
+                <span>Soulbound</span>
+              </div>
+            </div>
+            {mintError ? <p className="mt-4 text-sm text-red-400">{mintError}</p> : null}
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setActiveStep("class")}
+                className="border border-cyan/20 px-4 py-3 font-semibold text-cyan hover:border-cyan/50"
+              >
+                Back to Class
+              </button>
+              <button
+                type="button"
+                onClick={handleMintPassport}
+                disabled={isLoading}
+                className="rune-button inline-flex flex-1 items-center justify-center gap-2 px-4 py-3 font-semibold button-press hover-lift disabled:opacity-50"
+              >
+                <ShieldCheck className="size-4" />
+                {isLoading ? "Minting..." : "Sign and Mint Passport"}
+              </button>
+            </div>
+          </section>
+        )
+        )}
       </div>
 
       {/* Wallet Connection Modal */}
@@ -174,7 +281,7 @@ export const OnboardingClient = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <p className="text-sm text-muted">
-              Choose an EVM-compatible wallet detected in this browser.
+              Choose the EVM-compatible wallet that will be bound to your Soulbound Passport. You will be asked to sign a session message every time you connect.
             </p>
             {isDiscoveringWallets ? (
               <LoadingSpinner size="sm" message="Scanning browser wallets..." />
@@ -210,27 +317,8 @@ export const OnboardingClient = () => {
             )}
           </div>
 
-          <div className="border-t border-cyan/10 pt-4">
-            <label className="block text-sm font-medium mb-2">Manual fallback address</label>
-            <input
-              type="text"
-              name="wallet"
-              value={form.values.wallet}
-              onChange={form.handleChange}
-              placeholder="0xA5C3f19D0b8e6A45B6f1b9B4A21c7F1D9E3b8124"
-              className="w-full border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30 rounded"
-            />
-            {form.errors.wallet && (
-              <p className="mt-1 text-sm text-red-400">{form.errors.wallet}</p>
-            )}
-            <button
-              type="button"
-              onClick={(event) => form.handleSubmit(event)}
-              disabled={isLoading}
-              className="mt-3 w-full border border-cyan/20 px-4 py-2 font-semibold text-cyan hover:border-cyan/50 disabled:opacity-50"
-            >
-              Connect manual address
-            </button>
+          <div className="border-t border-cyan/10 pt-4 text-sm leading-6 text-muted">
+            Manual fallback addresses are disabled. Passport identity must start from a real wallet connection and fresh wallet signature so task checks can use the same bound wallet later.
           </div>
           {walletPickerError && <p className="text-sm text-red-400">{walletPickerError}</p>}
           {storeError && <p className="text-sm text-red-400">{storeError}</p>}
@@ -247,13 +335,6 @@ export const OnboardingClient = () => {
       )}
 
       {/* Success Toast */}
-      {form.submitSuccess && (
-        <Toast
-          type="success"
-          message="Wallet connected successfully!"
-          onClose={() => {}}
-        />
-      )}
     </main>
   );
 };

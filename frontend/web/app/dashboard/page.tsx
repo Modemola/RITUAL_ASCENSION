@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, BadgeCheck, Bot, ChevronRight, Flame, Hexagon, Shield, Sparkles } from "lucide-react";
+import { Activity, BadgeCheck, Bot, ChevronRight, Flame, Hexagon, MessageCircle, Shield, Sparkles, Wallet } from "lucide-react";
 import { useEffect } from "react";
-import { appClass, appProgress, appReputation, appTier, demoPassport, evolutionStages, quests } from "@/lib/data";
+import { appClass, appProgress, appReputation, appTier, demoIdentityLink, demoPassport, evolutionStages, quests } from "@/lib/data";
 import { useRitual } from "@/lib/store";
 import { LoadingSpinner, Skeleton, SkeletonText } from "@/lib/components";
+import { PrivateGate } from "@/lib/private-gate";
 
 export default function DashboardPage() {
-  const { wallet, isConnected, passport, isLoading } = useRitual();
+  const { wallet, isConnected, passport, isLoading, identityLink } = useRitual();
   const activeQuest = quests.find((quest) => quest.status === "in_progress") ?? quests[0];
 
   // In production, passport would come from API
@@ -17,8 +18,12 @@ export default function DashboardPage() {
   const displayProgress = appProgress;
   const displayReputation = appReputation;
   const displayTier = appTier;
+  const displayIdentity = identityLink ?? demoIdentityLink;
+  const displayWallet = wallet ?? displayPassport.wallet;
+  const discordInitial = displayIdentity.discordUsername.slice(0, 1).toUpperCase();
 
   return (
+    <PrivateGate>
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end fade-in">
         <div>
@@ -106,6 +111,54 @@ export default function DashboardPage() {
             ))}
           </div>
 
+          <div className="rune-panel p-5 fade-in-delay-1 hover-glow">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Linked identity</p>
+              </div>
+              <BadgeCheck className="size-6 text-green" />
+            </div>
+            <div className="mt-5 grid gap-3 text-sm">
+              <div className="border border-cyan/10 bg-black/20 p-3">
+                <div className="mb-2 flex items-center gap-2 text-muted">
+                  <Wallet className="size-4 text-cyan" />
+                  <span>Bound wallet</span>
+                </div>
+                <p className="break-all font-mono text-ink">{displayWallet}</p>
+              </div>
+              <div className="border border-cyan/10 bg-black/20 p-3">
+                <div className="mb-2 flex items-center gap-2 text-muted">
+                  <MessageCircle className="size-4 text-cyan" />
+                  <span>Linked Discord</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {displayIdentity.discordAvatarUrl ? (
+                    <img
+                      src={displayIdentity.discordAvatarUrl}
+                      alt=""
+                      className="size-11 rounded-full border border-cyan/25 bg-black/40"
+                    />
+                  ) : (
+                    <span className="grid size-11 place-items-center rounded-full border border-cyan/25 bg-cyan/10 font-mono text-sm text-cyan">
+                      {discordInitial}
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-mono text-ink">{displayIdentity.discordUsername}</p>
+                    <p className="mt-1 break-all font-mono text-xs text-muted">{displayIdentity.discordId}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between border border-cyan/10 bg-black/20 p-3 font-mono text-sm">
+                <span className="text-muted">Passport token</span>
+                <span className="text-cyan">#{displayPassport.tokenId}</span>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-muted">
+              Wallet and Discord verifications only check these linked accounts.
+            </p>
+          </div>
+
           <div className="rune-panel p-5 fade-in-delay-2 hover-glow">
             <div className="flex items-center gap-2">
               <Bot className="size-5 text-purple" />
@@ -170,5 +223,6 @@ export default function DashboardPage() {
         </div>
       </section>
     </main>
+    </PrivateGate>
   );
 }

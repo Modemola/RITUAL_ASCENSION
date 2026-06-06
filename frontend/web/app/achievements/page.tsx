@@ -1,8 +1,10 @@
 import { Lock, Medal } from "lucide-react";
 import { achievements } from "@/lib/data";
+import { PrivateGate } from "@/lib/private-gate";
 
 export default function AchievementsPage() {
   return (
+    <PrivateGate>
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <div className="fade-in">
         <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Achievement system</p>
@@ -22,5 +24,6 @@ export default function AchievementsPage() {
         ))}
       </section>
     </main>
+    </PrivateGate>
   );
 }

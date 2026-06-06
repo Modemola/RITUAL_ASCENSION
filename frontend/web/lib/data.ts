@@ -3,15 +3,18 @@ import {
   builderClasses,
   calculateReputation,
   demoDiscordActivity,
+  demoIdentityLink,
   demoPassport,
   demoTestnetActivity,
   evolutionStages,
+  builderLeaderboard,
   getBuilderClass,
   getLevelProgress,
   getTier,
   leaderboard,
   questCategories,
-  quests
+  quests,
+  verifiedRitualProducts
 } from "@ritual/domain";
 
 export const appWallet = demoPassport.wallet;
@@ -23,11 +26,14 @@ export const appReputation = calculateReputation(demoPassport);
 export {
   achievements,
   builderClasses,
+  builderLeaderboard,
   demoDiscordActivity,
+  demoIdentityLink,
   demoPassport,
   demoTestnetActivity,
   evolutionStages,
   leaderboard,
   questCategories,
-  quests
+  quests,
+  verifiedRitualProducts
 };

@@ -18,10 +18,9 @@ const difficultyColors = {
 };
 
 export const QuestDetailClient = ({ questId }: { questId: string }) => {
-  const { wallet, isConnected } = useRitual();
+  const { wallet, isConnected, identityLink, connectDiscord } = useRitual();
   const [discordId, setDiscordId] = useState("ritual-demo-user");
   const [discordUsername, setDiscordUsername] = useState("ritual_builder");
-  const [discordConnected, setDiscordConnected] = useState(false);
   const [verification, setVerification] = useState<VerificationData["verification"] | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const quest = useMemo(() => quests.find((item) => item.id === questId) ?? quests[0], [questId]);
@@ -31,7 +30,7 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
     async (values) => {
       const response = await apiClient.verifyQuest(quest.id, {
         wallet: wallet ?? undefined,
-        discordId: discordConnected ? discordId : undefined,
+        discordId: identityLink?.discordId,
         proof: values.proof,
       });
 
@@ -48,19 +47,17 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
   );
 
   const handleDiscordConnect = async () => {
-    const response = await apiClient.connectDiscord(wallet ?? "", discordId, discordUsername);
-    if (response.error) {
-      setToast({ type: "error", message: response.error });
-      return;
+    try {
+      const link = await connectDiscord(discordId, discordUsername);
+      setToast({ type: "success", message: `${link.discordUsername} is linked to this passport.` });
+    } catch (error) {
+      setToast({ type: "error", message: error instanceof Error ? error.message : "Discord connection failed" });
     }
-
-    setDiscordConnected(true);
-    setToast({ type: "success", message: "Discord account connected for mock verification." });
   };
 
   const needsWallet = quest.category === "testers" || quest.category === "builders";
   const needsDiscord = quest.category === "discord";
-  const canVerify = (!needsWallet || isConnected) && (!needsDiscord || discordConnected);
+  const canVerify = (!needsWallet || isConnected) && (!needsDiscord || Boolean(identityLink));
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -120,30 +117,41 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
             <div className="rune-panel p-6 fade-in-delay-3">
               <div className="flex items-center gap-2">
                 <MessageCircle className="size-5 text-cyan" />
-                <h2 className="text-xl font-semibold">Connect Discord</h2>
+                <h2 className="text-xl font-semibold">Linked Discord</h2>
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <input
-                  value={discordId}
-                  onChange={(event) => setDiscordId(event.target.value)}
-                  className="border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
-                  placeholder="Discord ID"
-                />
-                <input
-                  value={discordUsername}
-                  onChange={(event) => setDiscordUsername(event.target.value)}
-                  className="border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
-                  placeholder="Discord username"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleDiscordConnect}
-                className="rune-button mt-4 inline-flex items-center gap-2 px-4 py-2 font-semibold button-press hover-lift"
-              >
-                <MessageCircle className="size-4" />
-                {discordConnected ? "Discord Connected" : "Connect Discord"}
-              </button>
+              {identityLink ? (
+                <div className="mt-4 border border-green/30 bg-green/10 p-4 text-sm">
+                  <p className="font-mono text-green">{identityLink.discordUsername}</p>
+                  <p className="mt-1 text-muted">{identityLink.discordId}</p>
+                  <p className="mt-3 text-muted">Discord tasks will always check this linked Discord account.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <input
+                      value={discordId}
+                      onChange={(event) => setDiscordId(event.target.value)}
+                      className="border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
+                      placeholder="Discord ID"
+                    />
+                    <input
+                      value={discordUsername}
+                      onChange={(event) => setDiscordUsername(event.target.value)}
+                      className="border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
+                      placeholder="Discord username"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDiscordConnect}
+                    disabled={!isConnected}
+                    className="rune-button mt-4 inline-flex items-center gap-2 px-4 py-2 font-semibold button-press hover-lift disabled:opacity-50"
+                  >
+                    <MessageCircle className="size-4" />
+                    Link Discord to Passport
+                  </button>
+                </>
+              )}
             </div>
           ) : null}
 
@@ -153,9 +161,9 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
               <div className="border border-orange-500/30 bg-orange-500/5 p-4 text-center text-muted">
                 Connect your wallet before verifying this task.
               </div>
-            ) : needsDiscord && !discordConnected ? (
+            ) : needsDiscord && !identityLink ? (
               <div className="border border-orange-500/30 bg-orange-500/5 p-4 text-center text-muted">
-                Connect Discord before verifying this task.
+                Link the Discord account tied to this passport before verifying this task.
               </div>
             ) : (
               <form onSubmit={form.handleSubmit} className="space-y-4">
@@ -230,11 +238,17 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
           </button>
 
           {isConnected ? (
-            <div className="rune-panel p-4 text-xs text-muted">
-              <div className="flex items-center gap-2">
+            <div className="rune-panel grid gap-3 p-4 text-xs text-muted">
+              <div className="flex items-center gap-2 min-w-0">
                 <Wallet className="size-4 text-cyan" />
-                <span className="font-mono">{wallet}</span>
+                <span className="break-all font-mono">{wallet}</span>
               </div>
+              {identityLink ? (
+                <div className="flex items-center gap-2 min-w-0">
+                  <MessageCircle className="size-4 text-cyan" />
+                  <span className="break-all font-mono">{identityLink.discordId}</span>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </aside>
