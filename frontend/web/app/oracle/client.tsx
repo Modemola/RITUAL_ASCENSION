@@ -15,14 +15,14 @@ interface Message {
 }
 
 export const OracleClient = () => {
-  const { wallet, isConnected } = useRitual();
+  const { wallet, authToken, isConnected } = useRitual();
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState("");
 
   const { execute: sendMessage, status } = useAsync(async (content: string) => {
     if (!wallet) throw new Error("Wallet not connected");
 
-    const response = await apiClient.askOracle(content, wallet);
+    const response = await apiClient.askOracle(content, wallet, authToken ?? undefined);
     if (response.error) throw new Error(response.error);
 
     return response.data;

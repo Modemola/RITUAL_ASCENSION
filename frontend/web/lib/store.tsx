@@ -5,6 +5,7 @@ import { apiClient, IdentityLink } from "./api";
 
 interface UserSession {
   wallet: string | null;
+  authToken: string | null;
   identityLink: IdentityLink | null;
   passport: any | null;
   profile: any | null;
@@ -13,7 +14,7 @@ interface UserSession {
 }
 
 interface RitualContextType extends UserSession {
-  connectWallet: (wallet: string, signature: string) => Promise<void>;
+  connectWallet: (wallet: string, message: string, signature: string) => Promise<void>;
   mintPassport: (classId: number, mintSignature: string) => Promise<void>;
   connectDiscord: (discordId: string, username: string) => Promise<IdentityLink>;
   disconnectWallet: () => void;
@@ -27,6 +28,7 @@ const RitualContext = createContext<RitualContextType | undefined>(undefined);
 export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<UserSession>({
     wallet: null,
+    authToken: null,
     identityLink: null,
     passport: null,
     profile: null,
@@ -35,7 +37,7 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
   const [error, setError] = useState<string | null>(null);
 
-  const connectWallet = useCallback(async (wallet: string, signature: string) => {
+  const connectWallet = useCallback(async (wallet: string, message: string, signature: string) => {
     setSession((s) => ({ ...s, isLoading: true }));
     setError(null);
 
@@ -49,17 +51,24 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         throw new Error("Wallet signature is required to connect");
       }
 
-      setSession((s) => ({
-        ...s,
-        wallet,
-        isConnected: true,
-      }));
+      const authResponse = await apiClient.verifyAuthSignature(wallet, message, signature);
+      if (authResponse.error || !authResponse.data) {
+        throw new Error(authResponse.error || "Wallet signature could not be verified");
+      }
+      const authData = authResponse.data;
+      const [passportRes, profileRes] = await Promise.all([
+        apiClient.getPassport(authData.wallet),
+        apiClient.getProfile(authData.wallet),
+      ]);
 
       setSession((s) => ({
         ...s,
-        passport: null,
-        profile: null,
-        identityLink: null,
+        wallet: authData.wallet,
+        authToken: authData.token,
+        isConnected: true,
+        passport: passportRes.data?.passport ?? null,
+        profile: profileRes.data?.profile ?? null,
+        identityLink: profileRes.data?.profile.identityLink ?? null,
         isLoading: false,
       }));
     } catch (err) {
@@ -91,7 +100,7 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const mintPassport = useCallback(async (classId: number, mintSignature: string) => {
-    if (!session.wallet) {
+    if (!session.wallet || !session.authToken) {
       throw new Error("Connect your wallet before minting");
     }
 
@@ -102,17 +111,20 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setSession((s) => ({ ...s, isLoading: true }));
 
     try {
-      const tokenId = Math.floor(Date.now() / 1000);
-      const passport = {
-        wallet: session.wallet,
-        tokenId,
-        classId,
-        xp: 0,
-        stage: 1,
-        reputation: 0,
-        level: 1,
-        levelProgress: { level: 1, percent: 0, nextXp: 500 },
-      };
+      const response = await apiClient.mintPassport(
+        {
+          wallet: session.wallet,
+          classId,
+          mintSignature,
+        },
+        session.authToken
+      );
+
+      if (response.error || !response.data) {
+        throw new Error(response.error || "Failed to mint passport");
+      }
+
+      const passport = response.data.passport;
 
       setSession((s) => ({
         ...s,
@@ -133,10 +145,10 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setSession((s) => ({ ...s, isLoading: false }));
       throw err;
     }
-  }, [session.wallet]);
+  }, [session.authToken, session.wallet]);
 
   const connectDiscord = useCallback(async (discordId: string, username: string) => {
-    if (!session.wallet) {
+    if (!session.wallet || !session.authToken) {
       throw new Error("Connect your passport wallet before linking Discord");
     }
 
@@ -144,7 +156,20 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       throw new Error("This passport already has one Discord account linked");
     }
 
-    const response = await apiClient.connectDiscord(session.wallet, discordId, username);
+    const challengeResponse = await apiClient.createDiscordLinkChallenge(session.wallet, session.authToken);
+    if (challengeResponse.error || !challengeResponse.data) {
+      throw new Error(challengeResponse.error || "Failed to create Discord link challenge");
+    }
+
+    const response = await apiClient.verifyDiscordLink(
+      {
+        wallet: session.wallet,
+        challenge: challengeResponse.data.challenge,
+        discordId,
+        username,
+      },
+      session.authToken
+    );
     if (response.error || !response.data) {
       throw new Error(response.error || "Failed to connect Discord");
     }
@@ -155,6 +180,7 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       discordId: response.data.discord.discordId,
       discordUsername: response.data.discord.username,
       discordAvatarUrl: response.data.discord.avatarUrl,
+      discordAccountHash: response.data.discord.accountHash,
     };
 
     setSession((s) => ({
@@ -164,11 +190,12 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }));
 
     return identityLink;
-  }, [session.identityLink, session.passport?.tokenId, session.wallet]);
+  }, [session.authToken, session.identityLink, session.passport?.tokenId, session.wallet]);
 
   const disconnectWallet = useCallback(() => {
     setSession({
       wallet: null,
+      authToken: null,
       identityLink: null,
       passport: null,
       profile: null,

@@ -6,10 +6,15 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "test": "tsx --test src/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@ritual/domain": "file:../../shared/domain",
+    "@types/pg": "^8.20.0",
+    "ethers": "^6.16.0",
+    "pg": "^8.21.0",
     "tsx": "^4.19.2"
   },
   "devDependencies": {

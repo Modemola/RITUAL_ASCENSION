@@ -95,18 +95,7 @@ export async function requestWalletAddress(wallet: BrowserWallet): Promise<strin
   return accounts[0];
 }
 
-export async function requestWalletSignature(wallet: BrowserWallet, address: string): Promise<string> {
-  const issuedAt = new Date().toISOString();
-  const message = [
-    "Ritual Ascension wallet verification",
-    "",
-    "Sign this message to connect your wallet for this session.",
-    "This does not approve a transaction or spend funds.",
-    "",
-    `Wallet: ${address}`,
-    `Issued At: ${issuedAt}`
-  ].join("\n");
-
+export async function requestWalletSignature(wallet: BrowserWallet, address: string, message: string): Promise<string> {
   const signature = await wallet.provider.request({
     method: "personal_sign",
     params: [message, address]

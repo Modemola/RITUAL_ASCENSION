@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChevronLeft, MessageCircle, Share2, TestTube2, Wallet, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
-import { apiClient, VerificationData } from "@/lib/api";
+import { apiClient, QuestAttempt, VerificationData } from "@/lib/api";
 import { quests } from "@/lib/data";
 import { Toast } from "@/lib/components";
 import { useForm } from "@/lib/hooks";
@@ -18,26 +18,32 @@ const difficultyColors = {
 };
 
 export const QuestDetailClient = ({ questId }: { questId: string }) => {
-  const { wallet, isConnected, identityLink, connectDiscord } = useRitual();
+  const { wallet, authToken, isConnected, identityLink, connectDiscord } = useRitual();
   const [discordId, setDiscordId] = useState("ritual-demo-user");
   const [discordUsername, setDiscordUsername] = useState("ritual_builder");
   const [verification, setVerification] = useState<VerificationData["verification"] | null>(null);
+  const [attempt, setAttempt] = useState<QuestAttempt | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const quest = useMemo(() => quests.find((item) => item.id === questId) ?? quests[0], [questId]);
 
   const form = useForm(
     { proof: "" },
     async (values) => {
-      const response = await apiClient.verifyQuest(quest.id, {
-        wallet: wallet ?? undefined,
-        discordId: identityLink?.discordId,
-        proof: values.proof,
-      });
+      const response = await apiClient.verifyQuest(
+        quest.id,
+        {
+          wallet: wallet ?? undefined,
+          discordId: identityLink?.discordId,
+          proof: values.proof,
+        },
+        authToken ?? undefined
+      );
 
       if (response.error || !response.data) {
         throw new Error(response.error || "Verification failed");
       }
 
+      setAttempt(response.data.attempt ?? null);
       setVerification(response.data.verification);
       setToast({
         type: response.data.verification.ok ? "success" : "error",
@@ -53,6 +59,22 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
     } catch (error) {
       setToast({ type: "error", message: error instanceof Error ? error.message : "Discord connection failed" });
     }
+  };
+
+  const handleStartQuest = async () => {
+    if (!wallet) {
+      setToast({ type: "error", message: "Connect your wallet before starting this task." });
+      return;
+    }
+
+    const response = await apiClient.startQuest(quest.id, wallet, authToken ?? undefined);
+    if (response.error || !response.data) {
+      setToast({ type: "error", message: response.error || "Failed to start quest" });
+      return;
+    }
+
+    setAttempt(response.data.attempt);
+    setToast({ type: "success", message: "Quest started for this passport." });
   };
 
   const needsWallet = quest.category === "testers" || quest.category === "builders";
@@ -156,7 +178,14 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
           ) : null}
 
           <div className="rune-panel p-6 fade-in-delay-3">
-            <h2 className="mb-4 text-xl font-semibold">Verify Task</h2>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold">Verify Task</h2>
+              {attempt ? (
+                <span className="border border-cyan/20 px-2 py-1 font-mono text-xs uppercase text-cyan">
+                  {attempt.status}
+                </span>
+              ) : null}
+            </div>
             {needsWallet && !isConnected ? (
               <div className="border border-orange-500/30 bg-orange-500/5 p-4 text-center text-muted">
                 Connect your wallet before verifying this task.
@@ -167,6 +196,15 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
               </div>
             ) : (
               <form onSubmit={form.handleSubmit} className="space-y-4">
+                {!attempt ? (
+                  <button
+                    type="button"
+                    onClick={handleStartQuest}
+                    className="w-full border border-cyan/25 bg-cyan/10 px-4 py-2 font-semibold text-cyan hover:border-cyan/60"
+                  >
+                    Start Quest
+                  </button>
+                ) : null}
                 <div>
                   <label className="mb-2 block text-sm font-medium">Proof or note</label>
                   <textarea

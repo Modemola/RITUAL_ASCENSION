@@ -27,6 +27,12 @@ npm run dev:backend
 
 The API runs on `http://localhost:4000`.
 
+The backend now supports optional Postgres persistence. Copy `backend/api/.env.example`, set `DATABASE_URL`, and run:
+
+```bash
+npm run db:migrate -w backend/api
+```
+
 You can also use the clearer segmented scripts:
 
 ```bash

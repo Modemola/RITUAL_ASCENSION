@@ -102,6 +102,7 @@ export interface IdentityLink {
   discordId: string;
   discordUsername: string;
   discordAvatarUrl?: string;
+  discordAccountHash?: string;
 }
 
 export interface VerifiedRitualProduct {

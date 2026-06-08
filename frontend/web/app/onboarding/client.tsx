@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { builderClasses } from "@/lib/data";
 import { useRitual } from "@/lib/store";
+import { apiClient } from "@/lib/api";
 import { LoadingSpinner, Toast, Modal } from "@/lib/components";
 import { BrowserWallet, discoverBrowserWallets, requestMintSignature, requestWalletAddress, requestWalletSignature } from "@/lib/wallets";
 
@@ -46,8 +47,13 @@ export const OnboardingClient = () => {
     setWalletPickerError("");
     try {
       const address = await requestWalletAddress(browserWallet);
-      const signature = await requestWalletSignature(browserWallet, address);
-      await connectWallet(address, signature);
+      const nonceResponse = await apiClient.createAuthNonce(address);
+      if (nonceResponse.error || !nonceResponse.data) {
+        throw new Error(nonceResponse.error || "Failed to create wallet auth challenge");
+      }
+
+      const signature = await requestWalletSignature(browserWallet, address, nonceResponse.data.message);
+      await connectWallet(address, nonceResponse.data.message, signature);
       setConnectedBrowserWallet(browserWallet);
       setShowWalletModal(false);
     } catch (error) {
