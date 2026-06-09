@@ -36,9 +36,9 @@ export default function LeaderboardPage() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="fade-in">
-        <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Builder rankings</p>
-        <h1 className="mt-2 text-4xl font-semibold">Top Ritual builders.</h1>
-        <p className="mt-3 max-w-2xl leading-7 text-muted">
+        <p className="text-cipher text-xs uppercase tracking-[0.22em]">Builder rankings</p>
+        <h1 className="display-title text-aurora mt-2 text-4xl">Top Ritual builders.</h1>
+        <p className="copy-muted mt-3 max-w-2xl">
           Ranking is calculated from builder tasks only. Tester milestones and Discord tasks still progress the passport, but they do not affect this board.
         </p>
       </div>
@@ -62,8 +62,8 @@ export default function LeaderboardPage() {
                 }
                 style={{ "--index": index } as React.CSSProperties}
               >
-                <div className="flex h-full flex-col justify-between border border-white/15 bg-black/35 p-4">
-                  <p className="font-mono text-4xl text-cyan pop-in">#{index + 1}</p>
+                <div className="passport-frame flex h-full flex-col justify-between p-4">
+                  <p className="display-title text-aurora text-4xl pop-in">#{index + 1}</p>
                   <div className="ascend">
                     <p className="font-mono text-sm">{builder.wallet}</p>
                     <p className="text-sm text-white/65">
@@ -77,7 +77,7 @@ export default function LeaderboardPage() {
             ))}
       </section>
 
-      <section className="mt-6 overflow-hidden border border-cyan/15 bg-panel/70 fade-in-delay-1">
+      <section className="rune-panel mt-6 overflow-hidden fade-in-delay-1">
         {isLoading ? (
           <div className="p-8 text-center">
             <LoadingSpinner size="md" message="Loading leaderboard..." />

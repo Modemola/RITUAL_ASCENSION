@@ -60,9 +60,9 @@ export const OracleClient = () => {
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <header className="mb-8 fade-in">
-        <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Divine Council</p>
-        <h1 className="mt-2 text-4xl font-semibold slide-up">The Oracle Speaks</h1>
-        <p className="mt-3 max-w-2xl text-muted">
+        <p className="text-cipher text-xs uppercase tracking-[0.22em]">Divine Council</p>
+        <h1 className="display-title text-aurora mt-2 text-4xl slide-up">The Oracle Speaks</h1>
+        <p className="copy-muted mt-3 max-w-2xl">
           Seek guidance from the mystic oracle. Ask questions about your journey, the realms, or your ritual
           progression.
         </p>
@@ -76,9 +76,10 @@ export const OracleClient = () => {
         <>
           {/* Messages Container */}
           <div className="rune-panel mb-6 max-h-96 overflow-y-auto space-y-4 p-6 fade-in-delay-1">
+            <div className="motion-lattice pointer-events-none absolute inset-x-6 top-4 h-16 opacity-35" aria-hidden="true" />
             {messages.length === 0 ? (
               <div className="text-center text-muted py-8">
-                <p className="oracle-pulse inline-block">The oracle awaits your inquiry...</p>
+                <p className="oracle-pulse section-title text-aurora inline-block text-lg">The oracle awaits your inquiry...</p>
               </div>
             ) : (
               messages.map((msg) => (
@@ -88,7 +89,7 @@ export const OracleClient = () => {
                     msg.role === "user"
                       ? "ml-auto max-w-xs bg-cyan/10 border-cyan/30"
                       : "max-w-xs bg-purple/10 border-purple/30"
-                  } border rounded-lg p-3`}
+                  } border rounded-lg p-3 float-message`}
                 >
                   <p className="text-xs font-mono uppercase mb-1 opacity-60">
                     {msg.role === "user" ? "You" : "Oracle"}
@@ -98,7 +99,7 @@ export const OracleClient = () => {
               ))
             )}
             {status === "pending" && (
-              <div className="max-w-xs bg-purple/10 border border-purple/30 rounded-lg p-3">
+              <div className="max-w-xs rounded-lg border border-purple/30 bg-purple/10 p-3">
                 <LoadingSpinner size="sm" />
               </div>
             )}
@@ -113,7 +114,7 @@ export const OracleClient = () => {
                 value={form.values.message}
                 onChange={form.handleChange}
                 placeholder="Ask the oracle..."
-                className="flex-1 border border-cyan/15 bg-void px-4 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30 rounded"
+                className="detail-cell min-w-0 flex-1 px-4 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
                 disabled={status === "pending"}
                 maxLength={1000}
               />

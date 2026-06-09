@@ -25,10 +25,10 @@ export function PrivateGate({ children }: { children: ReactNode }) {
         <section className="rune-panel p-6 fade-in">
           <div className="flex items-center gap-3">
             <LockKeyhole className="size-6 text-cyan" />
-            <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Private passport area</p>
+            <p className="text-cipher text-xs uppercase tracking-[0.22em]">Private passport area</p>
           </div>
-          <h1 className="mt-4 text-3xl font-semibold">Connect and mint your Soulbound Passport.</h1>
-          <p className="mt-3 leading-7 text-muted">
+          <h1 className="display-title text-aurora mt-4 text-3xl">Connect and mint your Soulbound Passport.</h1>
+          <p className="copy-muted mt-3">
             Dashboard, quests, badges, and level progress are only visible after the current wallet signs in and has a minted SBT.
           </p>
           <Link href="/onboarding" className="rune-button mt-6 inline-flex items-center gap-2 px-4 py-3 font-semibold hover-lift">

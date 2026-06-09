@@ -26,11 +26,11 @@ export default function DashboardPage() {
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end fade-in">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Builder dashboard</p>
+          <p className="text-cipher text-xs uppercase tracking-[0.22em]">Builder dashboard</p>
           {isLoading ? (
             <SkeletonText width={300} className="mt-2" />
           ) : (
-            <h1 className="mt-2 text-4xl font-semibold">
+            <h1 className="display-title text-aurora mt-2 text-4xl">
               Welcome back, {displayClass.name}.
             </h1>
           )}
@@ -38,7 +38,7 @@ export default function DashboardPage() {
         {isConnected && (
           <Link
             href={`/profile/${wallet}`}
-            className="inline-flex items-center gap-2 border border-cyan/20 bg-panel/70 px-4 py-2 text-sm font-medium text-cyan hover-lift"
+            className="quiet-button inline-flex items-center gap-2 px-4 py-2 text-sm font-medium hover-lift"
           >
             Public profile <ChevronRight className="size-4" />
           </Link>
@@ -50,13 +50,13 @@ export default function DashboardPage() {
           <Skeleton height={460} className="min-h-[460px]" />
         ) : (
           <section className="passport-art pulse-rune min-h-[460px] border border-cyan/25 p-5 text-white shadow-rune scale-in">
-            <div className="flex h-full flex-col justify-between border border-white/15 bg-black/35 p-5 backdrop-blur">
+            <div className="passport-frame flex h-full flex-col justify-between p-5">
               <div className="flex items-start justify-between">
                 <div className="slide-up-delay">
                   <p className="font-mono text-xs uppercase tracking-[0.24em] text-cyan/75">
                     Soulbound Passport
                   </p>
-                  <h2 className="mt-2 text-5xl font-semibold">#{displayPassport.tokenId}</h2>
+                  <h2 className="display-title text-aurora mt-2 text-5xl">#{displayPassport.tokenId}</h2>
                 </div>
                 <div className="grid size-24 place-items-center rounded-full border border-cyan/30 bg-cyan/10 text-center shadow-rune pop-in">
                   <span className="font-mono text-xs text-cyan">REP</span>
@@ -64,9 +64,9 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="ascend">
-                <p className="text-3xl font-semibold">{displayClass.name}</p>
+                <p className="section-title text-3xl font-semibold">{displayClass.name}</p>
                 <p className="mt-2 max-w-xl text-white/68">{displayClass.focus}</p>
-                <div className="mt-6 h-4 overflow-hidden border border-cyan/25 bg-black/45">
+                <div className="mt-6 h-4 overflow-hidden rounded-full border border-cyan/25 bg-black/45">
                   <div
                     className="h-full bg-gradient-to-r from-cyan via-aqua to-green progress-fill"
                     style={{ width: `${displayProgress.percent}%` }}
@@ -90,7 +90,7 @@ export default function DashboardPage() {
             ].map(([label, value, Icon], i) => (
               <div
                 key={label as string}
-                className="rune-panel p-4 scale-in-stagger hover-lift"
+                className="rune-panel card-shift p-4 scale-in-stagger hover-lift"
                 style={{ "--index": i } as React.CSSProperties}
               >
                 {isLoading ? (
@@ -113,19 +113,19 @@ export default function DashboardPage() {
           <div className="rune-panel p-5 fade-in-delay-1 hover-glow">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Linked identity</p>
+                <p className="text-cipher text-xs uppercase tracking-[0.22em]">Linked identity</p>
               </div>
               <BadgeCheck className="size-6 text-green" />
             </div>
             <div className="mt-5 grid gap-3 text-sm">
-              <div className="border border-cyan/10 bg-black/20 p-3">
+              <div className="detail-cell p-3">
                 <div className="mb-2 flex items-center gap-2 text-muted">
                   <Wallet className="size-4 text-cyan" />
                   <span>Bound wallet</span>
                 </div>
                 <p className="break-all font-mono text-ink">{displayWallet}</p>
               </div>
-              <div className="border border-cyan/10 bg-black/20 p-3">
+              <div className="detail-cell p-3">
                 <div className="mb-2 flex items-center gap-2 text-muted">
                   <MessageCircle className="size-4 text-cyan" />
                   <span>Linked Discord</span>
@@ -148,12 +148,12 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between border border-cyan/10 bg-black/20 p-3 font-mono text-sm">
+              <div className="detail-cell flex items-center justify-between p-3 font-mono text-sm">
                 <span className="text-muted">Passport token</span>
                 <span className="text-cyan">#{displayPassport.tokenId}</span>
               </div>
             </div>
-            <p className="mt-4 text-sm leading-6 text-muted">
+            <p className="copy-muted mt-4 text-sm">
               Wallet and Discord verifications only check these linked accounts.
             </p>
           </div>
@@ -161,7 +161,7 @@ export default function DashboardPage() {
           <div className="rune-panel p-5 fade-in-delay-2 hover-glow">
             <div className="flex items-center gap-2">
               <Bot className="size-5 text-purple" />
-              <h2 className="text-xl font-semibold">Oracle recommendation</h2>
+              <h2 className="section-title text-xl font-semibold">Oracle recommendation</h2>
             </div>
             <p className="mt-3 leading-7 text-muted">
               Finish <span className="font-medium text-cyan">{activeQuest.title}</span>. It is already in
@@ -175,14 +175,14 @@ export default function DashboardPage() {
           <div className="rune-panel p-5 fade-in-delay-3 hover-glow">
             <div className="flex items-center gap-2">
               <Sparkles className="size-5 text-cyan" />
-              <h2 className="text-xl font-semibold">Recent activity</h2>
+              <h2 className="section-title text-xl font-semibold">Recent activity</h2>
             </div>
             <div className="mt-4 grid gap-3 font-mono text-sm">
               {["+500 XP - Deploy Contract verified", "ACH_001 - First Blood unlocked", "Stage 2 - Initiate ignition complete"].map(
                 (item, i) => (
                   <div
                     key={item}
-                    className="border border-cyan/10 bg-black/20 p-3 text-muted float-message"
+                    className="detail-cell p-3 text-muted float-message"
                     style={{ animationDelay: `${i * 100}ms` }}
                   >
                     {item}
@@ -195,15 +195,15 @@ export default function DashboardPage() {
       </div>
 
       <section className="mt-5 rune-panel p-5 fade-in-delay-2">
-        <h2 className="text-2xl font-semibold">Evolution timeline</h2>
+        <h2 className="section-title energy-thread inline-block text-2xl font-semibold">Evolution timeline</h2>
         <div className="mt-6 grid gap-4 md:grid-cols-5">
           {evolutionStages.map((stage, i) => (
             <div
               key={stage.id}
               className={
                 stage.id === displayPassport.stage
-                  ? "border border-cyan/40 bg-cyan/10 p-4 shadow-rune scale-in-stagger hover-lift"
-                  : "border border-cyan/15 bg-black/20 p-4 scale-in-stagger hover-lift"
+                  ? "detail-cell card-shift border-cyan/40 bg-cyan/10 p-4 shadow-rune scale-in-stagger hover-lift"
+                  : "detail-cell card-shift p-4 scale-in-stagger hover-lift"
               }
               style={{ "--index": i } as React.CSSProperties}
             >
@@ -215,7 +215,7 @@ export default function DashboardPage() {
                 )}
                 <span className="font-mono text-sm text-cyan">0{stage.id}</span>
               </div>
-              <h3 className="mt-3 font-semibold">{stage.name}</h3>
+              <h3 className="section-title mt-3 font-semibold">{stage.name}</h3>
               <p className="mt-2 text-sm leading-6 text-muted">{stage.trigger}</p>
             </div>
           ))}

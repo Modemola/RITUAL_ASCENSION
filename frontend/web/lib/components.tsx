@@ -1,6 +1,7 @@
 "use client";
 
 import { CSSProperties, ReactNode } from "react";
+import { X } from "lucide-react";
 
 export const LoadingSpinner = ({
   size = "md",
@@ -95,8 +96,8 @@ export const Toast = ({
     >
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium">{message}</p>
-        <button type="button" onClick={onClose} className="text-lg font-bold opacity-70 hover:opacity-100">
-          x
+        <button type="button" onClick={onClose} className="grid size-7 place-items-center rounded-md opacity-70 hover:opacity-100">
+          <X className="size-4" />
         </button>
       </div>
     </div>
@@ -120,17 +121,22 @@ export const Modal = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-40 bg-black/64 backdrop-blur-md" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 fade-in">
-        <div className="rune-panel w-full max-w-md scale-in">
-          <div className="flex items-center justify-between border-b border-cyan/15 px-6 py-4">
-            <h2 className="text-xl font-semibold">{title}</h2>
-            <button type="button" onClick={onClose} className="text-muted transition-colors hover:text-cyan">
-              x
+        <div className="rune-panel w-full max-w-lg scale-in shadow-rune">
+          <div className="flex items-center justify-between border-b border-cyan/12 px-5 py-4 sm:px-6">
+            <h2 className="text-lg font-semibold sm:text-xl">{title}</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="quiet-button grid size-9 place-items-center text-muted transition-colors hover:text-cyan"
+              aria-label="Close modal"
+            >
+              <X className="size-4" />
             </button>
           </div>
-          <div className="px-6 py-4">{children}</div>
-          {actions ? <div className="flex gap-3 border-t border-cyan/15 px-6 py-4">{actions}</div> : null}
+          <div className="px-5 py-5 sm:px-6">{children}</div>
+          {actions ? <div className="flex gap-3 border-t border-cyan/12 px-5 py-4 sm:px-6">{actions}</div> : null}
         </div>
       </div>
     </>
@@ -157,7 +163,7 @@ export const ErrorBoundary = ({
         </div>
         {onRetry ? (
           <button type="button" onClick={onRetry} className="rune-button px-4 py-2 text-sm font-semibold">
-            Try Again
+            Try again
           </button>
         ) : null}
       </div>

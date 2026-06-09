@@ -91,11 +91,11 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
       <header className="mb-8 fade-in">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">{quest.category} task</p>
-            <h1 className="mt-2 text-4xl font-semibold">{quest.title}</h1>
+            <p className="text-cipher text-xs uppercase tracking-[0.22em]">{quest.category} task</p>
+            <h1 className="display-title text-aurora mt-2 text-4xl">{quest.title}</h1>
             <p className="mt-2 text-muted">{quest.verification}</p>
           </div>
-          <div className={`border px-3 py-1 font-mono text-xs uppercase tracking-widest ${difficultyColors[quest.difficulty]}`}>
+          <div className={`status-pill px-3 py-1 font-mono text-xs uppercase tracking-widest ${difficultyColors[quest.difficulty]}`}>
             {quest.difficulty}
           </div>
         </div>
@@ -104,12 +104,12 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <section className="space-y-6">
           <div className="rune-panel p-6 fade-in-delay-1">
-            <h2 className="mb-3 text-xl font-semibold">Description</h2>
-            <p className="leading-relaxed text-muted">{quest.description}</p>
+            <h2 className="section-title mb-3 text-xl font-semibold">Description</h2>
+            <p className="copy-muted">{quest.description}</p>
           </div>
 
           <div className="rune-panel p-6 fade-in-delay-2">
-            <h2 className="mb-4 text-xl font-semibold">Steps</h2>
+            <h2 className="section-title mb-4 text-xl font-semibold">Steps</h2>
             <ol className="space-y-3">
               {quest.steps.map((step, i) => (
                 <li key={step} className="flex items-start gap-3">
@@ -126,7 +126,7 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
             <div className="rune-panel p-6 fade-in-delay-3">
               <div className="flex items-center gap-2">
                 <TestTube2 className="size-5 text-cyan" />
-                <h2 className="text-xl font-semibold">Ritual testnet wallet check</h2>
+                <h2 className="section-title text-xl font-semibold">Ritual testnet wallet check</h2>
               </div>
               <p className="mt-3 text-sm leading-6 text-muted">
                 This verifier only considers indexed activity from the Ritual blockchain testnet. Production should
@@ -139,10 +139,10 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
             <div className="rune-panel p-6 fade-in-delay-3">
               <div className="flex items-center gap-2">
                 <MessageCircle className="size-5 text-cyan" />
-                <h2 className="text-xl font-semibold">Linked Discord</h2>
+                <h2 className="section-title text-xl font-semibold">Linked Discord</h2>
               </div>
               {identityLink ? (
-                <div className="mt-4 border border-green/30 bg-green/10 p-4 text-sm">
+                <div className="detail-cell mt-4 border-green/30 bg-green/10 p-4 text-sm">
                   <p className="font-mono text-green">{identityLink.discordUsername}</p>
                   <p className="mt-1 text-muted">{identityLink.discordId}</p>
                   <p className="mt-3 text-muted">Discord tasks will always check this linked Discord account.</p>
@@ -153,13 +153,13 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
                     <input
                       value={discordId}
                       onChange={(event) => setDiscordId(event.target.value)}
-                      className="border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
+                      className="detail-cell px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
                       placeholder="Discord ID"
                     />
                     <input
                       value={discordUsername}
                       onChange={(event) => setDiscordUsername(event.target.value)}
-                      className="border border-cyan/15 bg-void px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
+                      className="detail-cell px-3 py-2 outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
                       placeholder="Discord username"
                     />
                   </div>
@@ -179,19 +179,19 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
 
           <div className="rune-panel p-6 fade-in-delay-3">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold">Verify Task</h2>
+              <h2 className="section-title text-xl font-semibold">Verify Task</h2>
               {attempt ? (
-                <span className="border border-cyan/20 px-2 py-1 font-mono text-xs uppercase text-cyan">
+                <span className="status-pill px-2.5 py-1 font-mono text-xs uppercase">
                   {attempt.status}
                 </span>
               ) : null}
             </div>
             {needsWallet && !isConnected ? (
-              <div className="border border-orange-500/30 bg-orange-500/5 p-4 text-center text-muted">
+              <div className="detail-cell border-orange-500/30 bg-orange-500/5 p-4 text-center text-muted">
                 Connect your wallet before verifying this task.
               </div>
             ) : needsDiscord && !identityLink ? (
-              <div className="border border-orange-500/30 bg-orange-500/5 p-4 text-center text-muted">
+              <div className="detail-cell border-orange-500/30 bg-orange-500/5 p-4 text-center text-muted">
                 Link the Discord account tied to this passport before verifying this task.
               </div>
             ) : (
@@ -200,7 +200,7 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
                   <button
                     type="button"
                     onClick={handleStartQuest}
-                    className="w-full border border-cyan/25 bg-cyan/10 px-4 py-2 font-semibold text-cyan hover:border-cyan/60"
+                    className="quiet-button w-full px-4 py-2 font-semibold"
                   >
                     Start Quest
                   </button>
@@ -212,7 +212,7 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
                     value={form.values.proof}
                     onChange={form.handleChange}
                     placeholder={quest.expectedProof}
-                    className="w-full border border-cyan/15 bg-void px-3 py-2 font-mono text-sm outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
+                    className="detail-cell w-full px-3 py-2 font-mono text-sm outline-none placeholder:text-muted focus:border-cyan/50 focus:ring-2 focus:ring-cyan/30"
                     rows={4}
                   />
                 </div>
@@ -230,8 +230,8 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
 
         <aside className="space-y-4">
           <div className="rune-panel p-5 text-center fade-in-delay-1">
-            <p className="mb-1 font-mono text-xs uppercase tracking-widest text-cyan">Reward</p>
-            <p className="flex items-center justify-center gap-2 text-3xl font-semibold">
+            <p className="text-cipher mb-1 text-xs uppercase tracking-widest">Reward</p>
+            <p className="section-title flex items-center justify-center gap-2 text-3xl font-semibold">
               <Zap className="size-6 text-gold" />
               {quest.xp}
             </p>
@@ -239,7 +239,7 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
           </div>
 
           <div className="rune-panel p-5 fade-in-delay-2">
-            <p className="mb-2 font-mono text-xs uppercase tracking-widest text-cyan">Verification</p>
+            <p className="text-cipher mb-2 text-xs uppercase tracking-widest">Verification</p>
             <div className="grid gap-3 text-sm">
               <div className="flex justify-between gap-3">
                 <span className="text-muted">Method</span>
@@ -260,7 +260,7 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
 
           {verification ? (
             <div className={`rune-panel p-5 fade-in-delay-2 ${verification.ok ? "border-green/35" : "border-red-500/35"}`}>
-              <p className="mb-2 font-mono text-xs uppercase tracking-widest text-cyan">Result</p>
+              <p className="text-cipher mb-2 text-xs uppercase tracking-widest">Result</p>
               <p className={verification.ok ? "text-green" : "text-red-400"}>{verification.reason}</p>
               {verification.value !== undefined ? (
                 <p className="mt-3 font-mono text-sm text-muted">

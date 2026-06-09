@@ -1,0 +1,43 @@
+
+> ritual-ascension@0.1.0 dev:backend
+> npm run dev -w backend/api
+
+
+> @ritual/api@0.1.0 dev
+> tsx watch src/server.ts
+
+Ritual Ascension API listening on http://localhost:4000
+{"level":"info","event":"http_request","requestId":"be2aa3e6-e938-4ac8-9878-5d5386ecd189","method":"GET","path":"/api/health","statusCode":200,"durationMs":9}
+{"level":"info","event":"http_request","requestId":"6da53b7d-113f-41da-87e0-eb2147de0882","method":"POST","path":"/api/auth/nonce","statusCode":200,"durationMs":8}
+{"level":"info","event":"http_request","requestId":"2974d1e0-45df-42db-a6ff-28f5a4181154","method":"OPTIONS","path":"/api/auth/nonce","statusCode":204,"durationMs":2}
+{"level":"info","event":"http_request","requestId":"f533bf35-7fc0-48e1-a3e3-8cbf5d100824","method":"POST","path":"/api/auth/nonce","statusCode":200,"durationMs":5}
+{"level":"info","event":"http_request","requestId":"8538dfca-882b-4b52-8d28-7e066e7a7819","method":"OPTIONS","path":"/api/auth/verify","statusCode":204,"durationMs":1}
+{"level":"info","event":"http_request","requestId":"3ae160ee-165d-4956-8c4f-10405a5f7bc6","method":"POST","path":"/api/auth/verify","statusCode":200,"durationMs":743}
+{"level":"info","event":"http_request","requestId":"915a8f2d-2e0f-43a1-a91c-c50501e974e2","method":"OPTIONS","path":"/api/passport/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":204,"durationMs":1}
+{"level":"info","event":"http_request","requestId":"90133261-2b94-4f49-b046-12e8c30efb3d","method":"OPTIONS","path":"/api/profile/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":204,"durationMs":3}
+{"level":"info","event":"http_request","requestId":"811d893b-f7c4-4679-8b1b-5e4046b380ed","method":"GET","path":"/api/passport/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":404,"durationMs":2}
+{"level":"info","event":"http_request","requestId":"0d2572f0-b03e-4761-80c0-7aa25fbfffcc","method":"GET","path":"/api/profile/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":404,"durationMs":3}
+{"level":"info","event":"http_request","requestId":"14d0d175-4b66-4e67-bd8f-f30477d639c0","method":"OPTIONS","path":"/api/passport/mint","statusCode":204,"durationMs":1}
+{"level":"info","event":"http_request","requestId":"af47e725-996b-4ae0-a64d-e3cbd222cf27","method":"POST","path":"/api/passport/mint","statusCode":201,"durationMs":4}
+1:24:24 PM [tsx] change in ./..\..\shared\domain\dist\index.js Restarting...
+cRitual Ascension API listening on http://localhost:4000
+{"level":"info","event":"http_request","requestId":"3f82dcd8-42da-4daf-aaa0-ab75116b9d68","method":"OPTIONS","path":"/api/auth/nonce","statusCode":204,"durationMs":24}
+{"level":"info","event":"http_request","requestId":"bf883ef0-0764-4022-b4b9-80ddbb996771","method":"POST","path":"/api/auth/nonce","statusCode":200,"durationMs":12}
+{"level":"info","event":"http_request","requestId":"a2e940e0-a220-471f-83af-62e3c3a6d7d9","method":"OPTIONS","path":"/api/auth/verify","statusCode":204,"durationMs":1}
+{"level":"info","event":"http_request","requestId":"b02cd983-e0c9-4406-9951-f3597619fe19","method":"POST","path":"/api/auth/verify","statusCode":200,"durationMs":1245}
+{"level":"info","event":"http_request","requestId":"ca16f883-9206-4c97-a763-823ddafdbab2","method":"OPTIONS","path":"/api/passport/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":204,"durationMs":1}
+{"level":"info","event":"http_request","requestId":"49e766a9-619f-487b-bcd7-fc96ced46c02","method":"OPTIONS","path":"/api/profile/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":204,"durationMs":2}
+{"level":"info","event":"http_request","requestId":"31a437c0-0655-4f90-95d3-7f13ece0c681","method":"GET","path":"/api/passport/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":404,"durationMs":3}
+{"level":"info","event":"http_request","requestId":"4c08d273-4f43-49a0-9b1c-2aaf4163f0b2","method":"GET","path":"/api/profile/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":404,"durationMs":1}
+{"level":"info","event":"http_request","requestId":"97b7c177-6c52-4860-8fd6-6af33568af8a","method":"OPTIONS","path":"/api/passport/mint","statusCode":204,"durationMs":5}
+{"level":"info","event":"http_request","requestId":"ccbfd846-e07d-43f4-9210-6dc7947edd3d","method":"POST","path":"/api/passport/mint","statusCode":201,"durationMs":23}
+{"level":"info","event":"http_request","requestId":"e14aa85b-ce73-47d2-ab38-16e0afe4b3bf","method":"OPTIONS","path":"/api/auth/nonce","statusCode":204,"durationMs":13}
+{"level":"info","event":"http_request","requestId":"f0d1ed68-88aa-4229-bab6-739e3616f9fe","method":"POST","path":"/api/auth/nonce","statusCode":200,"durationMs":47}
+{"level":"info","event":"http_request","requestId":"dea137fd-458d-4a4c-a1c4-af04b5c7f269","method":"OPTIONS","path":"/api/auth/verify","statusCode":204,"durationMs":1}
+{"level":"info","event":"http_request","requestId":"b6646de5-c27d-48f7-930f-02b3e829c21c","method":"POST","path":"/api/auth/verify","statusCode":200,"durationMs":206}
+{"level":"info","event":"http_request","requestId":"d57743c6-0881-4198-b4e0-12b0ec5bc167","method":"OPTIONS","path":"/api/passport/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":204,"durationMs":0}
+{"level":"info","event":"http_request","requestId":"86170875-87d3-43e8-911f-097e18ced4e8","method":"OPTIONS","path":"/api/profile/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":204,"durationMs":1}
+{"level":"info","event":"http_request","requestId":"c7630b8f-bee5-4481-a43a-1e75c3f6bf67","method":"GET","path":"/api/passport/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":200,"durationMs":13}
+{"level":"info","event":"http_request","requestId":"522611c7-d900-494b-8558-ed5388f06dd4","method":"GET","path":"/api/profile/0x3acb6d0cb65532a90665330f5ff4cbc0c68cd185","statusCode":200,"durationMs":11}
+4:29:56 PM [tsx] change in ./..\..\shared\domain\dist\index.js Restarting...
+cRitual Ascension API listening on http://localhost:4000

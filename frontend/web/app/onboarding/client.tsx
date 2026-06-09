@@ -1,14 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { Check, ShieldCheck, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  BadgeCheck,
+  Check,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  Wallet
+} from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { builderClasses } from "@/lib/data";
 import { useRitual } from "@/lib/store";
 import { apiClient } from "@/lib/api";
-import { LoadingSpinner, Toast, Modal } from "@/lib/components";
-import { BrowserWallet, discoverBrowserWallets, requestMintSignature, requestWalletAddress, requestWalletSignature } from "@/lib/wallets";
+import { LoadingSpinner, Modal, Toast } from "@/lib/components";
+import {
+  BrowserWallet,
+  discoverBrowserWallets,
+  requestMintSignature,
+  requestWalletAddress,
+  requestWalletSignature
+} from "@/lib/wallets";
 
 export const OnboardingClient = () => {
   const router = useRouter();
@@ -98,24 +113,24 @@ export const OnboardingClient = () => {
             className="rune-panel flex items-center gap-3 p-4 scale-in-stagger hover-lift"
             style={{ "--index": index } as React.CSSProperties}
           >
-            <span className="grid size-9 place-items-center rounded-full border border-cyan/30 font-mono text-cyan">
-              0{index + 1}
-            </span>
-            <span className="font-medium">{step}</span>
+            <span className="status-pill grid size-9 place-items-center font-mono text-xs">0{index + 1}</span>
+            <div>
+              <span className="font-medium">{step}</span>
+              <p className="mt-1 text-xs text-muted">
+                {index === 0 ? "Signed session" : index === 1 ? "Permanent path" : "Soulbound token"}
+              </p>
+            </div>
           </div>
         ))}
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr]">
         <section className="rune-panel h-fit p-6 fade-in-delay-1">
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">
-            Onboarding ritual
-          </p>
-          <h1 className="mt-3 text-4xl font-semibold slide-up">
-            Mint your Soulbound Passport.
-          </h1>
-          <p className="mt-4 leading-7 text-muted">
-            Connect and sign with the wallet that will own your Soulbound Passport, select a permanent class, then send the mint transaction. That same wallet becomes the only wallet checked for task verification.
+          <p className="text-cipher text-xs uppercase tracking-[0.22em]">Onboarding ritual</p>
+          <h1 className="display-title text-aurora mt-3 text-4xl slide-up">Mint your Soulbound Passport.</h1>
+          <p className="copy-muted mt-4">
+            Bind one wallet, choose your class, and unlock the dashboard with a passport that carries XP, quests,
+            reputation, and evolution history.
           </p>
           <button
             onClick={openWalletModal}
@@ -125,7 +140,7 @@ export const OnboardingClient = () => {
             {isLoading ? "Connecting..." : "Connect Wallet"}
           </button>
 
-          <div className="mt-6 border border-cyan/15 bg-black/25 p-4 pulse-subtle">
+          <div className="detail-cell mt-6 p-4 pulse-subtle">
             <div className="flex items-center gap-3 text-sm text-muted">
               {isLoading ? (
                 <>
@@ -134,8 +149,8 @@ export const OnboardingClient = () => {
                 </>
               ) : (
                 <>
-                  <span className="size-4 text-green">OK</span>
-                  <span>Ready to connect</span>
+                  <BadgeCheck className="size-4 text-green" />
+                  <span>{wallet ? "Wallet session ready" : "Ready for wallet signature"}</span>
                 </>
               )}
             </div>
@@ -145,13 +160,13 @@ export const OnboardingClient = () => {
         {isConnected && passport ? (
           <section className="rune-panel flex min-h-80 flex-col justify-between p-6 fade-in-delay-2">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Passport already minted</p>
-              <h2 className="mt-3 text-3xl font-semibold">This wallet has completed onboarding.</h2>
-              <p className="mt-3 leading-7 text-muted">
-                Onboarding only happens once per wallet. Future visits require a fresh wallet signature, then the existing Soulbound Passport is loaded for this wallet.
+              <p className="text-cipher text-xs uppercase tracking-[0.22em]">Passport already minted</p>
+              <h2 className="section-title mt-3 text-3xl font-semibold">This wallet has completed onboarding.</h2>
+              <p className="copy-muted mt-3">
+                Future visits ask for a fresh wallet signature, then load this Soulbound Passport.
               </p>
             </div>
-            <div className="mt-6 grid gap-3 border border-cyan/10 bg-black/20 p-4 font-mono text-sm">
+            <div className="detail-cell mt-6 grid gap-3 p-4 font-mono text-sm">
               <div className="flex justify-between gap-3">
                 <span className="text-muted">Passport token</span>
                 <span className="text-cyan">#{passport.tokenId}</span>
@@ -165,60 +180,60 @@ export const OnboardingClient = () => {
                 <span>{passport.xp}</span>
               </div>
             </div>
-            <Link href="/dashboard" className="rune-button mt-6 inline-flex items-center justify-center px-4 py-3 font-semibold button-press hover-lift">
+            <Link
+              href="/dashboard"
+              className="rune-button mt-6 inline-flex items-center justify-center px-4 py-3 font-semibold button-press hover-lift"
+            >
               Open Dashboard
             </Link>
           </section>
-        ) : (
-        activeStep === "class" ? (
-        <section className="grid gap-3 md:grid-cols-2">
-          {builderClasses.map((builderClass, i) => (
-            <article
-              key={builderClass.id}
-              onClick={() => setSelectedClass(builderClass.id)}
-              className={`rune-panel p-5 scale-in-stagger hover-lift cursor-pointer transition-all ${
-                selectedClass === builderClass.id
-                  ? "border-cyan/45 bg-cyan/10 shadow-rune hover-glow"
-                  : ""
-              }`}
-              style={{ "--index": i } as React.CSSProperties}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-mono text-xs text-cyan">CLASS {builderClass.id}</p>
-                  <h2 className="mt-2 text-xl font-semibold">{builderClass.name}</h2>
+        ) : activeStep === "class" ? (
+          <section className="grid gap-3 md:grid-cols-2">
+            {builderClasses.map((builderClass, i) => (
+              <article
+                key={builderClass.id}
+                onClick={() => setSelectedClass(builderClass.id)}
+                className={`rune-panel card-shift cursor-pointer p-5 transition-all scale-in-stagger hover-lift ${
+                  selectedClass === builderClass.id ? "border-cyan/45 bg-cyan/10 shadow-rune hover-glow" : ""
+                }`}
+                style={{ "--index": i } as React.CSSProperties}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="status-pill inline-flex px-2.5 py-1 font-mono text-xs">CLASS {builderClass.id}</p>
+                    <h2 className="section-title mt-3 text-xl font-semibold">{builderClass.name}</h2>
+                  </div>
+                  {selectedClass === builderClass.id ? <Check className="size-5 text-green pop-in" /> : null}
                 </div>
-                {selectedClass === builderClass.id ? (
-                  <Check className="size-5 text-green pop-in" />
-                ) : null}
-              </div>
-              <p className="mt-3 min-h-20 text-sm leading-6 text-muted">{builderClass.focus}</p>
-              <p className="mt-4 border-t border-cyan/10 pt-3 text-sm font-medium text-cyan">
-                {builderClass.achievement}
-              </p>
-            </article>
-          ))}
-          <button
-            type="button"
-            onClick={handlePrepareMint}
-            className="rune-button inline-flex items-center justify-center px-4 py-3 font-semibold button-press hover-lift md:col-span-2"
-          >
-            Continue with {builderClasses.find((c) => c.id === selectedClass)?.name}
-          </button>
-        </section>
+                <p className="mt-3 min-h-20 text-sm leading-6 text-muted">{builderClass.focus}</p>
+                <div className="mt-4 flex items-center gap-2 border-t border-cyan/10 pt-3 text-sm font-medium text-cyan">
+                  <Sparkles className="size-4 shrink-0" />
+                  <span>{builderClass.achievement}</span>
+                </div>
+              </article>
+            ))}
+            <button
+              type="button"
+              onClick={handlePrepareMint}
+              className="rune-button inline-flex items-center justify-center px-4 py-3 font-semibold button-press hover-lift md:col-span-2"
+            >
+              Continue with {selectedClassData.name}
+            </button>
+          </section>
         ) : (
           <section className="rune-panel p-6 fade-in-delay-2">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Mint Soulbound Passport</p>
-                <h2 className="mt-3 text-3xl font-semibold">Review the token details.</h2>
+                <p className="text-cipher text-xs uppercase tracking-[0.22em]">Mint Soulbound Passport</p>
+                <h2 className="section-title mt-3 text-3xl font-semibold">Review the token details.</h2>
               </div>
               <ShieldCheck className="size-7 text-green" />
             </div>
-            <p className="mt-3 leading-7 text-muted">
-              This is the final onboarding step. Your wallet will be asked to sign the mint confirmation, then your Soulbound Passport will unlock the dashboard.
+            <p className="copy-muted mt-3">
+              Your wallet signs the mint confirmation, then the dashboard opens with this class and token identity
+              attached.
             </p>
-            <div className="mt-6 grid gap-3 border border-cyan/10 bg-black/20 p-4 font-mono text-sm">
+            <div className="detail-cell mt-6 grid gap-3 p-4 font-mono text-sm">
               <div className="flex justify-between gap-3">
                 <span className="text-muted">Wallet</span>
                 <span className="break-all text-right text-cyan">{wallet}</span>
@@ -241,9 +256,10 @@ export const OnboardingClient = () => {
               <button
                 type="button"
                 onClick={() => setActiveStep("class")}
-                className="border border-cyan/20 px-4 py-3 font-semibold text-cyan hover:border-cyan/50"
+                className="quiet-button inline-flex items-center justify-center gap-2 px-4 py-3 font-semibold"
               >
-                Back to Class
+                <ArrowLeft className="size-4" />
+                Back to class
               </button>
               <button
                 type="button"
@@ -256,11 +272,9 @@ export const OnboardingClient = () => {
               </button>
             </div>
           </section>
-        )
         )}
       </div>
 
-      {/* Wallet Connection Modal */}
       <Modal
         isOpen={showWalletModal}
         title="Connect Wallet"
@@ -269,7 +283,7 @@ export const OnboardingClient = () => {
           <>
             <button
               onClick={() => setShowWalletModal(false)}
-              className="flex-1 border border-cyan/20 px-4 py-2 font-semibold text-muted hover:text-cyan"
+              className="quiet-button flex-1 px-4 py-2 font-semibold text-muted hover:text-cyan"
             >
               Cancel
             </button>
@@ -277,17 +291,18 @@ export const OnboardingClient = () => {
               type="button"
               onClick={refreshWallets}
               disabled={isDiscoveringWallets}
-              className="rune-button flex-1 px-4 py-2 font-semibold button-press hover-lift disabled:opacity-50"
+              className="rune-button inline-flex flex-1 items-center justify-center gap-2 px-4 py-2 font-semibold button-press hover-lift disabled:opacity-50"
             >
+              <RefreshCw className={`size-4 ${isDiscoveringWallets ? "animate-spin" : ""}`} />
               {isDiscoveringWallets ? "Scanning..." : "Refresh"}
             </button>
           </>
         }
       >
         <div className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-sm text-muted">
-              Choose the EVM-compatible wallet that will be bound to your Soulbound Passport. You will be asked to sign a session message every time you connect.
+          <div className="space-y-3">
+            <p className="copy-muted text-sm">
+              Pick the EVM wallet that will own this passport. The next prompt is a session signature, not a transfer.
             </p>
             {isDiscoveringWallets ? (
               <LoadingSpinner size="sm" message="Scanning browser wallets..." />
@@ -299,17 +314,17 @@ export const OnboardingClient = () => {
                     key={`${browserWallet.id}-${browserWallet.name}`}
                     onClick={() => connectDetectedWallet(browserWallet)}
                     disabled={isLoading}
-                    className="flex items-center justify-between gap-3 border border-cyan/15 bg-black/20 px-3 py-3 text-left hover:border-cyan/45 disabled:opacity-50"
+                    className="wallet-option flex items-center justify-between gap-3 px-3 py-3 text-left disabled:opacity-50"
                   >
                     <span className="flex items-center gap-3">
                       {browserWallet.icon ? (
-                        <img src={browserWallet.icon} alt="" className="size-7" />
+                        <img src={browserWallet.icon} alt="" className="size-8 rounded-md" />
                       ) : (
-                        <span className="grid size-7 place-items-center border border-cyan/20 text-xs text-cyan">EVM</span>
+                        <span className="status-pill grid size-8 place-items-center font-mono text-xs">EVM</span>
                       )}
                       <span>
                         <span className="block font-medium">{browserWallet.name}</span>
-                        <span className="block text-xs text-muted">Browser wallet provider</span>
+                        <span className="block text-xs text-muted">Injected wallet provider</span>
                       </span>
                     </span>
                     <Wallet className="size-4 text-cyan" />
@@ -317,30 +332,32 @@ export const OnboardingClient = () => {
                 ))}
               </div>
             ) : (
-              <div className="border border-amber/30 bg-amber/10 p-3 text-sm text-muted">
-                No browser wallet detected. Install or unlock an EVM wallet, then refresh.
+              <div className="detail-cell flex gap-3 border-amber/30 bg-amber/10 p-3 text-sm text-muted">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber" />
+                <span>No browser wallet detected. Install or unlock an EVM wallet, then refresh.</span>
               </div>
             )}
           </div>
 
-          <div className="border-t border-cyan/10 pt-4 text-sm leading-6 text-muted">
-            Manual fallback addresses are disabled. Passport identity must start from a real wallet connection and fresh wallet signature so task checks can use the same bound wallet later.
+          <div className="detail-cell p-3 text-sm leading-6 text-muted">
+            Manual addresses are disabled so quest checks always use the same bound wallet.
           </div>
-          {walletPickerError && <p className="text-sm text-red-400">{walletPickerError}</p>}
-          {storeError && <p className="text-sm text-red-400">{storeError}</p>}
+          {walletPickerError ? (
+            <div className="detail-cell flex gap-3 border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <span>{walletPickerError}</span>
+            </div>
+          ) : null}
+          {storeError ? (
+            <div className="detail-cell flex gap-3 border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <span>{storeError}</span>
+            </div>
+          ) : null}
         </div>
       </Modal>
 
-      {/* Error Toast */}
-      {storeError && (
-        <Toast
-          type="error"
-          message={storeError}
-          onClose={() => {}}
-        />
-      )}
-
-      {/* Success Toast */}
+      {storeError ? <Toast type="error" message={storeError} onClose={() => {}} /> : null}
     </main>
   );
 };

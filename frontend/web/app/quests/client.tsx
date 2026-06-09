@@ -50,8 +50,8 @@ export function QuestsClient() {
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end fade-in">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-cyan">Quest engine</p>
-          <h1 className="mt-2 text-4xl font-semibold">Verify progress across Ritual.</h1>
+          <p className="text-cipher text-xs uppercase tracking-[0.22em]">Quest engine</p>
+          <h1 className="display-title text-aurora mt-2 text-4xl">Verify progress across Ritual.</h1>
         </div>
       </div>
 
@@ -65,7 +65,7 @@ export function QuestsClient() {
               key={category.id}
               type="button"
               onClick={() => setActiveCategory(category.id)}
-              className={`rune-panel p-4 text-left transition-all hover-lift ${
+              className={`rune-panel card-shift p-4 text-left transition-all hover-lift ${
                 isActive ? "border-cyan/45 bg-cyan/10 shadow-rune" : ""
               }`}
             >
@@ -87,7 +87,7 @@ export function QuestsClient() {
           <div className="flex items-start gap-3">
             <ActiveIcon className="mt-1 size-5 text-cyan" />
             <div>
-              <h2 className="text-2xl font-semibold">{activeCategoryData.name}</h2>
+              <h2 className="section-title text-2xl font-semibold">{activeCategoryData.name}</h2>
               <p className="mt-2 leading-7 text-muted">{activeCategoryData.verificationSummary}</p>
             </div>
           </div>
@@ -117,7 +117,7 @@ export function QuestsClient() {
         </div>
       </section>
 
-      <div className="mt-5 flex items-center gap-3 border border-cyan/15 bg-panel/70 px-3 py-2 fade-in-delay-1">
+      <div className="detail-cell mt-5 flex items-center gap-3 px-3 py-2 fade-in-delay-1">
         <Search className="size-4 text-cyan" />
         <input
           value={search}
@@ -133,17 +133,17 @@ export function QuestsClient() {
           return (
             <article
               key={quest.id}
-              className="rune-panel flex min-h-72 flex-col justify-between p-5 hover:border-cyan/45 scale-in-stagger hover-lift"
+              className="rune-panel card-shift flex min-h-72 flex-col justify-between p-5 hover:border-cyan/45 scale-in-stagger hover-lift"
               style={{ "--index": i } as React.CSSProperties}
             >
               <div>
                 <div className="flex items-start justify-between gap-4">
-                  <span className="border border-cyan/15 px-2 py-1 font-mono text-xs text-cyan">{quest.verification}</span>
-                  <span className={`border p-2 ${statusClass[quest.status]}`}>
+                  <span className="status-pill px-2.5 py-1 font-mono text-xs">{quest.verification}</span>
+                  <span className={`rounded-md border p-2 ${statusClass[quest.status]}`}>
                     <Icon className="size-4" />
                   </span>
                 </div>
-                <h2 className="mt-5 text-xl font-semibold">{quest.title}</h2>
+                <h2 className="section-title mt-5 text-xl font-semibold">{quest.title}</h2>
                 <p className="mt-3 text-sm leading-6 text-muted">{quest.description}</p>
               </div>
               <div className="mt-5 border-t border-cyan/10 pt-4">
@@ -153,7 +153,7 @@ export function QuestsClient() {
                 </div>
                 <Link
                   href={`/quests/${quest.id}`}
-                  className="mt-4 inline-flex w-full justify-center border border-cyan/25 bg-cyan/10 px-3 py-2 text-sm font-medium text-cyan hover:border-cyan/60 hover-lift"
+                  className="quiet-button mt-4 inline-flex w-full justify-center px-3 py-2 text-sm font-medium hover-lift"
                 >
                   Verify Task
                 </Link>
