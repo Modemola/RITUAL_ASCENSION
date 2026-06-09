@@ -1,3 +1,5 @@
+import type { Achievement, Quest, QuestCategory } from "@ritual/domain";
+
 // API Client for Ritual Ascension backend
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -24,9 +26,9 @@ export interface PassportData {
 export interface ProfileData {
   profile: {
     wallet: string;
-    passport: any;
-    achievements: any[];
-    completedQuests: any[];
+    passport: PassportData["passport"];
+    achievements: Achievement[];
+    completedQuests: Quest[];
     identityLink?: IdentityLink | null;
   };
 }
@@ -115,17 +117,17 @@ export interface VerifiedProductsData {
 }
 
 export interface QuestData {
-  quest: any;
+  quest: Quest;
 }
 
 export interface QuestsData {
-  quests: any[];
+  quests: Array<Quest & { attempt?: QuestAttempt | null }>;
   attempts?: QuestAttempt[];
   total: number;
 }
 
 export interface QuestCategoriesData {
-  categories: any[];
+  categories: QuestCategory[];
 }
 
 export interface TestnetActivityData {
@@ -181,7 +183,7 @@ export interface VerificationData {
       classId: number;
       xp: number;
       stage: number;
-      achievements: any[];
+      achievements: Achievement[];
       completedQuestIds: string[];
       activeWeeks: number;
       projectsCompleted: number;
@@ -196,7 +198,7 @@ export interface VerificationData {
       questAttemptId?: string;
       awardedAt: string;
     }>;
-    unlockedAchievements: any[];
+    unlockedAchievements: Achievement[];
     evolutionEvents: Array<{
       id: string;
       wallet: string;
@@ -243,7 +245,7 @@ export interface ReviewRecord {
 export interface ReviewQueueItem {
   review: ReviewRecord;
   attempt: QuestAttempt;
-  quest?: any;
+  quest?: Quest;
 }
 
 export interface ReviewQueueData {

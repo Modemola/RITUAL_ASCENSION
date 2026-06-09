@@ -32,7 +32,7 @@ export const validators = {
 };
 
 // Custom hook for form handling
-export const useForm = <T extends Record<string, any>>(
+export const useForm = <T extends Record<string, unknown>>(
   initialValues: T,
   onSubmit: (values: T) => Promise<void>
 ) => {

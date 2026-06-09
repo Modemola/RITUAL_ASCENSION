@@ -8,7 +8,6 @@ import { LoadingSpinner, Skeleton } from "@/lib/components";
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(defaultLeaderboard);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -82,10 +81,6 @@ export default function LeaderboardPage() {
         {isLoading ? (
           <div className="p-8 text-center">
             <LoadingSpinner size="md" message="Loading leaderboard..." />
-          </div>
-        ) : error ? (
-          <div className="border border-red-500/30 bg-red-500/5 p-4 text-center text-red-400">
-            {error}
           </div>
         ) : (
           leaderboard.map((builder, index) => (

@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { Activity, BadgeCheck, Bot, ChevronRight, Flame, Hexagon, MessageCircle, Shield, Sparkles, Wallet } from "lucide-react";
-import { useEffect } from "react";
 import { appClass, appProgress, appReputation, appTier, demoIdentityLink, demoPassport, evolutionStages, quests } from "@/lib/data";
 import { useRitual } from "@/lib/store";
-import { LoadingSpinner, Skeleton, SkeletonText } from "@/lib/components";
+import { Skeleton, SkeletonText } from "@/lib/components";
 import { PrivateGate } from "@/lib/private-gate";
 
 export default function DashboardPage() {

@@ -1,14 +1,14 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { apiClient, IdentityLink } from "./api";
+import { apiClient, IdentityLink, PassportData, ProfileData } from "./api";
 
 interface UserSession {
   wallet: string | null;
   authToken: string | null;
   identityLink: IdentityLink | null;
-  passport: any | null;
-  profile: any | null;
+  passport: PassportData["passport"] | null;
+  profile: ProfileData["profile"] | null;
   isConnected: boolean;
   isLoading: boolean;
 }
@@ -130,7 +130,7 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         ...s,
         passport,
         profile: {
-          wallet: session.wallet,
+          wallet: passport.wallet,
           passport,
           achievements: [],
           completedQuests: [],
