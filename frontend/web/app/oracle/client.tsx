@@ -58,8 +58,15 @@ export const OracleClient = () => {
   );
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <header className="mb-8 fade-in">
+    <main className="relative mx-auto max-w-4xl overflow-hidden px-4 py-8 sm:px-6">
+      <img
+        src="/photos/oracle.png"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full select-none object-cover object-center"
+        style={{ opacity: 0.07, mixBlendMode: "luminosity" }}
+      />
+      <header className="relative z-10 mb-8 fade-in">
         <p className="text-cipher text-xs uppercase tracking-[0.22em]">Divine Council</p>
         <h1 className="display-title text-aurora mt-2 text-4xl slide-up">The Oracle Speaks</h1>
         <p className="copy-muted mt-3 max-w-2xl">
@@ -69,13 +76,13 @@ export const OracleClient = () => {
       </header>
 
       {!isConnected ? (
-        <div className="rune-panel space-y-4 border-orange-500/30 bg-orange-500/5 p-6 text-center">
+        <div className="rune-panel relative z-10 space-y-4 border-orange-500/30 bg-orange-500/5 p-6 text-center">
           <p className="text-muted">Connect your wallet to commune with the oracle.</p>
         </div>
       ) : (
         <>
           {/* Messages Container */}
-          <div className="rune-panel mb-6 max-h-96 overflow-y-auto space-y-4 p-6 fade-in-delay-1">
+          <div className="rune-panel relative z-10 mb-6 max-h-96 space-y-4 overflow-y-auto p-6 fade-in-delay-1">
             <div className="motion-lattice pointer-events-none absolute inset-x-6 top-4 h-16 opacity-35" aria-hidden="true" />
             {messages.length === 0 ? (
               <div className="text-center text-muted py-8">
@@ -106,7 +113,7 @@ export const OracleClient = () => {
           </div>
 
           {/* Input Form */}
-          <form onSubmit={form.handleSubmit} className="rune-panel p-6 fade-in-delay-2">
+          <form onSubmit={form.handleSubmit} className="rune-panel relative z-10 p-6 fade-in-delay-2">
             <div className="flex gap-3">
               <input
                 type="text"
