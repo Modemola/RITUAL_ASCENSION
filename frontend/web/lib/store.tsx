@@ -1,7 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { apiClient, IdentityLink, PassportData, ProfileData } from "./api";
+
+const SESSION_STORAGE_KEY = "ritual.ascension.session.v1";
 
 interface UserSession {
   wallet: string | null;
@@ -11,6 +13,12 @@ interface UserSession {
   profile: ProfileData["profile"] | null;
   isConnected: boolean;
   isLoading: boolean;
+}
+
+interface PersistedSession {
+  wallet: string;
+  authToken: string;
+  expiresAt: string;
 }
 
 interface RitualContextType extends UserSession {
@@ -25,6 +33,42 @@ interface RitualContextType extends UserSession {
 
 const RitualContext = createContext<RitualContextType | undefined>(undefined);
 
+function loadPersistedSession(): PersistedSession | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const rawSession = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!rawSession) return null;
+
+    const session = JSON.parse(rawSession) as Partial<PersistedSession>;
+    if (!session.wallet || !session.authToken || !session.expiresAt) return null;
+
+    if (new Date(session.expiresAt).getTime() <= Date.now()) {
+      window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      return null;
+    }
+
+    return {
+      wallet: session.wallet,
+      authToken: session.authToken,
+      expiresAt: session.expiresAt,
+    };
+  } catch {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    return null;
+  }
+}
+
+function savePersistedSession(session: PersistedSession) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+}
+
+function clearPersistedSession() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(SESSION_STORAGE_KEY);
+}
+
 export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<UserSession>({
     wallet: null,
@@ -36,6 +80,65 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isLoading: false,
   });
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const persistedSession = loadPersistedSession();
+    if (!persistedSession) return;
+
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      setSession((s) => ({
+        ...s,
+        wallet: persistedSession.wallet,
+        authToken: persistedSession.authToken,
+        isConnected: true,
+        isLoading: true,
+      }));
+
+      try {
+        const [passportRes, profileRes] = await Promise.all([
+          apiClient.getPassport(persistedSession.wallet),
+          apiClient.getProfile(persistedSession.wallet),
+        ]);
+
+        if (cancelled) return;
+
+        setSession((s) => ({
+          ...s,
+          wallet: persistedSession.wallet,
+          authToken: persistedSession.authToken,
+          isConnected: true,
+          passport: passportRes.data?.passport ?? null,
+          profile: profileRes.data?.profile ?? null,
+          identityLink: profileRes.data?.profile.identityLink ?? null,
+          isLoading: false,
+        }));
+      } catch (err) {
+        if (cancelled) return;
+
+        const errorMsg = err instanceof Error ? err.message : "Failed to restore wallet session";
+        setError(errorMsg);
+        clearPersistedSession();
+        setSession((s) => ({
+          ...s,
+          wallet: null,
+          authToken: null,
+          identityLink: null,
+          passport: null,
+          profile: null,
+          isConnected: false,
+          isLoading: false,
+        }));
+      }
+    };
+
+    void restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const connectWallet = useCallback(async (wallet: string, message: string, signature: string) => {
     setSession((s) => ({ ...s, isLoading: true }));
@@ -56,10 +159,17 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         throw new Error(authResponse.error || "Wallet signature could not be verified");
       }
       const authData = authResponse.data;
+      const expiresAt = new Date(Date.now() + authData.expiresIn * 1000).toISOString();
       const [passportRes, profileRes] = await Promise.all([
         apiClient.getPassport(authData.wallet),
         apiClient.getProfile(authData.wallet),
       ]);
+
+      savePersistedSession({
+        wallet: authData.wallet,
+        authToken: authData.token,
+        expiresAt,
+      });
 
       setSession((s) => ({
         ...s,
@@ -193,6 +303,7 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [session.authToken, session.identityLink, session.passport?.tokenId, session.wallet]);
 
   const disconnectWallet = useCallback(() => {
+    clearPersistedSession();
     setSession({
       wallet: null,
       authToken: null,

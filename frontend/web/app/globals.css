@@ -104,6 +104,77 @@ textarea:focus-visible {
   z-index: 1;
 }
 
+.art-bg {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--art-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0.1;
+  mix-blend-mode: luminosity;
+  filter: saturate(0.9) contrast(1.08);
+}
+
+.art-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 72% 26%, rgba(0, 245, 212, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(6, 9, 10, 0.2), rgba(6, 9, 10, 0.82));
+}
+
+.art-bg--passport {
+  --art-image: url("/photos/passport.png");
+  background-position: right center;
+  background-size: min(820px, 88vw) auto;
+  opacity: 0.2;
+  mix-blend-mode: screen;
+}
+
+.art-bg--identity {
+  --art-image: url("/photos/identity.png");
+  background-position: center;
+  opacity: 0.13;
+}
+
+.art-bg--oracle {
+  --art-image: url("/photos/oracle.png");
+  background-position: center top;
+  opacity: 0.14;
+  mix-blend-mode: screen;
+}
+
+.art-bg--panel {
+  opacity: 0.075;
+  background-size: cover;
+}
+
+.art-bg--hero {
+  opacity: 0.23;
+  mask-image: radial-gradient(ellipse 76% 72% at 68% 46%, black 18%, transparent 100%);
+}
+
+.art-bg--page {
+  position: fixed;
+  opacity: 0.11;
+  mask-image: radial-gradient(ellipse 82% 68% at 50% 14%, black 12%, transparent 80%);
+}
+
+.art-surface {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.art-surface > :not(.art-bg):not(.fixed) {
+  position: relative;
+  z-index: 1;
+}
+
 .rune-button {
   border-radius: var(--control-radius);
   background: linear-gradient(90deg, #00f5d4, #67e8f9);

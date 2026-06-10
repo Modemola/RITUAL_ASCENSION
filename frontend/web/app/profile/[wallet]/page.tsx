@@ -9,14 +9,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
       <p className="text-cipher text-xs uppercase tracking-[0.22em]">Public profile</p>
       <h1 className="mt-2 break-all font-mono text-2xl font-semibold sm:text-4xl slide-up">{wallet}</h1>
       <section className="mt-6 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="relative overflow-hidden passport-art pulse-rune min-h-96 border border-cyan/25 p-5 text-white shadow-rune scale-in hover-glow">
-          <img
-            src="/photos/identity.png"
-            alt=""
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 z-0 h-full w-full select-none object-cover object-center"
-            style={{ opacity: 0.08, mixBlendMode: "luminosity" }}
-          />
+        <div className="relative overflow-hidden passport-art art-surface pulse-rune min-h-96 border border-cyan/25 p-5 text-white shadow-rune scale-in hover-glow">
+          <div aria-hidden="true" className="art-bg art-bg--identity art-bg--panel" />
           <div className="passport-frame relative z-10 flex h-full flex-col justify-between p-5">
             <div className="slide-up-delay">
               <p className="text-cipher text-xs uppercase tracking-[0.24em]">Passport #{demoPassport.tokenId}</p>

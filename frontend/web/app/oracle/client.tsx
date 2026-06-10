@@ -58,14 +58,8 @@ export const OracleClient = () => {
   );
 
   return (
-    <main className="relative mx-auto max-w-4xl overflow-hidden px-4 py-8 sm:px-6">
-      <img
-        src="/photos/oracle.png"
-        alt=""
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 h-full w-full select-none object-cover object-center"
-        style={{ opacity: 0.07, mixBlendMode: "luminosity" }}
-      />
+    <main className="art-surface relative mx-auto max-w-4xl overflow-hidden px-4 py-8 sm:px-6">
+      <div aria-hidden="true" className="art-bg art-bg--oracle art-bg--page" />
       <header className="relative z-10 mb-8 fade-in">
         <p className="text-cipher text-xs uppercase tracking-[0.22em]">Divine Council</p>
         <h1 className="display-title text-aurora mt-2 text-4xl slide-up">The Oracle Speaks</h1>

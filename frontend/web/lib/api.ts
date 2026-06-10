@@ -1,7 +1,8 @@
 import type { Achievement, Quest, QuestCategory } from "@ritual/domain";
 
-// API Client for Ritual Ascension backend
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+// API Client for Ritual Ascension backend. By default browser calls use the
+// Next.js same-origin rewrite, which avoids CORS and frontend port drift.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export interface ApiResponse<T> {
   data?: T;
@@ -299,9 +300,11 @@ async function apiFetch<T>(
     const data = await response.json();
     return { data: data as T, statusCode: 200 };
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to fetch from API";
     return {
-      error:
-        error instanceof Error ? error.message : "Failed to fetch from API",
+      error: /failed to fetch/i.test(message)
+        ? "API is unreachable. Start the backend with npm run dev:backend or run npm run dev:all."
+        : message,
       statusCode: 500,
     };
   }

@@ -49,7 +49,8 @@ export default function DashboardPage() {
         {isLoading ? (
           <Skeleton height={460} className="min-h-[460px]" />
         ) : (
-          <section className="passport-art pulse-rune min-h-[460px] border border-cyan/25 p-5 text-white shadow-rune scale-in">
+          <section className="passport-art art-surface pulse-rune min-h-[460px] border border-cyan/25 p-5 text-white shadow-rune scale-in">
+            <div aria-hidden="true" className="art-bg art-bg--passport art-bg--panel" />
             <div className="passport-frame flex h-full flex-col justify-between p-5">
               <div className="flex items-start justify-between">
                 <div className="slide-up-delay">

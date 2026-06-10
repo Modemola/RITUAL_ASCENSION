@@ -9,7 +9,8 @@
     "blockchain/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w frontend/web",
+    "dev": "node scripts/dev-all.mjs",
+    "dev:all": "node scripts/dev-all.mjs",
     "dev:frontend": "npm run dev -w frontend/web",
     "dev:backend": "npm run dev -w backend/api",
     "build": "npm run build -w shared/domain && npm run build -w backend/api && npm run build -w frontend/web",

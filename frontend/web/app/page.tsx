@@ -21,17 +21,7 @@ export default function LandingPage() {
   return (
     <main>
       <section className="relative overflow-hidden border-b border-cyan/15">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 z-0 w-full select-none lg:w-[58%]"
-          style={{ maskImage: "radial-gradient(ellipse 72% 78% at 50% 50%, black 18%, transparent 100%)" }}
-        >
-          <img
-            src="/photos/passport.png"
-            alt=""
-            className="h-full w-full object-contain mix-blend-screen opacity-[0.18]"
-          />
-        </div>
+        <div aria-hidden="true" className="art-bg art-bg--passport art-bg--hero" />
         <div className="identity-flow pointer-events-none absolute inset-x-0 top-8 mx-auto hidden h-40 max-w-5xl md:block" aria-hidden="true">
           <span className="flow-node left-[6%] top-10">WALLET</span>
           <span className="flow-node left-[42%] top-2">SBT</span>
@@ -64,7 +54,8 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="passport-art pulse-rune breath-scale relative min-h-[520px] border border-cyan/25 p-4 shadow-rune scale-in">
+          <div className="passport-art art-surface pulse-rune breath-scale relative min-h-[520px] border border-cyan/25 p-4 shadow-rune scale-in">
+            <div aria-hidden="true" className="art-bg art-bg--identity art-bg--panel" />
             <div className="motion-lattice pointer-events-none absolute inset-x-4 top-10 h-24 opacity-60" aria-hidden="true" />
             <div className="passport-frame flex h-full flex-col justify-between p-5">
               <div className="flex items-start justify-between">

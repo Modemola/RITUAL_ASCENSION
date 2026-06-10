@@ -125,14 +125,8 @@ export const OnboardingClient = () => {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr]">
-        <section className="rune-panel h-fit p-6 fade-in-delay-1">
-          <img
-            src="/photos/identity.png"
-            alt=""
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 z-0 h-full w-full select-none object-cover object-center"
-            style={{ opacity: 0.07, mixBlendMode: "luminosity" }}
-          />
+        <section className="rune-panel art-surface h-fit p-6 fade-in-delay-1">
+          <div aria-hidden="true" className="art-bg art-bg--identity art-bg--panel" />
           <p className="text-cipher text-xs uppercase tracking-[0.22em]">Onboarding ritual</p>
           <h1 className="display-title text-aurora mt-3 text-4xl slide-up">Mint your Soulbound Passport.</h1>
           <p className="copy-muted mt-4">
@@ -165,7 +159,8 @@ export const OnboardingClient = () => {
         </section>
 
         {isConnected && passport ? (
-          <section className="rune-panel flex min-h-80 flex-col justify-between p-6 fade-in-delay-2">
+          <section className="rune-panel art-surface flex min-h-80 flex-col justify-between p-6 fade-in-delay-2">
+            <div aria-hidden="true" className="art-bg art-bg--passport art-bg--panel" />
             <div>
               <p className="text-cipher text-xs uppercase tracking-[0.22em]">Passport already minted</p>
               <h2 className="section-title mt-3 text-3xl font-semibold">This wallet has completed onboarding.</h2>
@@ -228,7 +223,8 @@ export const OnboardingClient = () => {
             </button>
           </section>
         ) : (
-          <section className="rune-panel p-6 fade-in-delay-2">
+          <section className="rune-panel art-surface p-6 fade-in-delay-2">
+            <div aria-hidden="true" className="art-bg art-bg--passport art-bg--panel" />
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-cipher text-xs uppercase tracking-[0.22em]">Mint Soulbound Passport</p>
