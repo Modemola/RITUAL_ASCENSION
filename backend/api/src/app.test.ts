@@ -201,7 +201,7 @@ describe("Ritual Ascension API", () => {
     assert.equal(response.status, 200);
     assert.equal(body.questId, "tester-contract-explorer");
     assert.equal(body.verification.ok, true);
-    assert.equal(body.verification.source, "ritual-testnet-indexer");
+    assert.equal(body.verification.source, "demo-ritual-testnet-indexer");
     assert.equal(body.attempt.status, "completed");
 
     const duplicate = await apiFetch("/api/quests/tester-contract-explorer/verify", {
@@ -510,6 +510,28 @@ describe("Ritual Ascension API", () => {
 
     assert.equal(response.status, 401);
     assert.equal(body.error, "Unauthorized");
+  });
+
+  it("returns a context-aware local Oracle recommendation", async () => {
+    const wallet = Wallet.createRandom();
+    const token = await authenticateWallet(wallet);
+    await mintPassport(wallet, token, 2);
+
+    const { response, body } = await apiFetch("/api/oracle/chat", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        wallet: wallet.address,
+        message: "What should I do next as an agent builder?"
+      })
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(body.source, "local");
+    assert.equal(typeof body.message, "string");
+    assert.equal(body.recommendedQuest.id, "llm-precompile");
+    assert.equal(typeof body.learningOutcome, "string");
+    assert.equal(typeof body.nextMilestone, "string");
   });
 
   it("returns a clear error when chain sync is not configured", async () => {

@@ -24,6 +24,7 @@ interface PersistedSession {
 interface RitualContextType extends UserSession {
   connectWallet: (wallet: string, message: string, signature: string) => Promise<void>;
   mintPassport: (classId: number, mintSignature: string) => Promise<void>;
+  syncPassportFromChain: () => Promise<void>;
   connectDiscord: (discordId: string, username: string) => Promise<IdentityLink>;
   disconnectWallet: () => void;
   fetchUserData: (wallet: string) => Promise<void>;
@@ -257,6 +258,41 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [session.authToken, session.wallet]);
 
+  const syncPassportFromChain = useCallback(async () => {
+    if (!session.wallet || !session.authToken) {
+      throw new Error("Connect your wallet before syncing a passport");
+    }
+
+    setSession((s) => ({ ...s, isLoading: true }));
+    setError(null);
+
+    try {
+      const response = await apiClient.syncPassportFromChain(session.wallet, session.authToken);
+      if (response.error || !response.data) {
+        throw new Error(response.error || "Failed to sync passport from chain");
+      }
+
+      const passport = response.data.passport;
+      setSession((s) => ({
+        ...s,
+        passport,
+        profile: {
+          wallet: passport.wallet,
+          passport,
+          achievements: passport.achievements ?? [],
+          completedQuests: [],
+          identityLink: s.identityLink,
+        },
+        isLoading: false,
+      }));
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to sync passport from chain";
+      setError(errorMsg);
+      setSession((s) => ({ ...s, isLoading: false }));
+      throw err;
+    }
+  }, [session.authToken, session.wallet]);
+
   const connectDiscord = useCallback(async (discordId: string, username: string) => {
     if (!session.wallet || !session.authToken) {
       throw new Error("Connect your passport wallet before linking Discord");
@@ -322,6 +358,7 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     ...session,
     connectWallet,
     mintPassport,
+    syncPassportFromChain,
     connectDiscord,
     disconnectWallet,
     fetchUserData,

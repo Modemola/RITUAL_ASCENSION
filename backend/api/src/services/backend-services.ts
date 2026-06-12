@@ -6,7 +6,7 @@ import {
   InMemoryDiscordLinkChallengeRepository,
   PostgresDiscordLinkChallengeRepository
 } from "../repositories/discord-link-challenge-repository.js";
-import type { ChainConfig } from "../config.js";
+import type { ChainConfig, OracleConfig, VerificationConfig } from "../config.js";
 import { createRitualChainClient } from "../chain/ritual-chain-client.js";
 import type { RitualChainClient } from "../chain/ritual-chain-client.js";
 import { createPostgresPool } from "../db/postgres.js";
@@ -35,6 +35,7 @@ import { AuthService } from "./auth-service.js";
 import { ChainSyncService } from "./chain-sync-service.js";
 import { IdentityService } from "./identity-service.js";
 import { NotificationService } from "./notification-service.js";
+import { OracleService } from "./oracle-service.js";
 import { PassportService } from "./passport-service.js";
 import { ProgressionService } from "./progression-service.js";
 import { QuestEngineService } from "./quest-engine-service.js";
@@ -48,6 +49,8 @@ interface BackendServiceOptions {
   chainClient?: RitualChainClient;
   databaseUrl?: string;
   jwtSecret?: string;
+  oracle?: OracleConfig;
+  verification?: VerificationConfig;
 }
 
 export interface BackendServices {
@@ -56,6 +59,7 @@ export interface BackendServices {
   chainSync: ChainSyncService;
   identity: IdentityService;
   notifications: NotificationService;
+  oracle: OracleService;
   passport: PassportService;
   progression: ProgressionService;
   quests: QuestEngineService;
@@ -87,7 +91,9 @@ export function createBackendServices(options: BackendServiceOptions = {}): Back
     ? new PostgresReviewRecordRepository(pool!)
     : new InMemoryReviewRecordRepository();
   const identity = new IdentityService(identityLinks, discordChallenges, passports);
-  const questVerification = new QuestVerificationService(identity);
+  const questVerification = new QuestVerificationService(identity, {
+    verification: options.verification
+  });
   const progression = new ProgressionService(passports, progressionRepository);
   const adminReviews = new AdminReviewService(
     reviewRecords,
@@ -95,6 +101,9 @@ export function createBackendServices(options: BackendServiceOptions = {}): Back
     progression,
     options.adminWallets
   );
+
+  const passport = new PassportService(passports);
+  const quests = new QuestEngineService(questAttempts, questVerification, progression, adminReviews);
 
   return {
     adminReviews,
@@ -108,9 +117,10 @@ export function createBackendServices(options: BackendServiceOptions = {}): Back
     ),
     identity,
     notifications: new NotificationService(progressionRepository),
-    passport: new PassportService(passports),
+    oracle: new OracleService(passport, quests, options.oracle),
+    passport,
     progression,
-    quests: new QuestEngineService(questAttempts, questVerification, progression, adminReviews),
+    quests,
     questVerification,
     readiness: new ReadinessService(pool, options.chain)
   };

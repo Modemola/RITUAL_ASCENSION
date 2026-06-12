@@ -1,9 +1,0 @@
-
-> @ritual/web@0.1.0 dev
-> next dev -p 3010
-
-   ▲ Next.js 15.5.19
-   - Local:        http://localhost:3010
-   - Network:      http://10.232.170.132:3010
-
- ✓ Starting...

@@ -20,6 +20,8 @@ import { LoadingSpinner, Modal, Toast } from "@/lib/components";
 import {
   BrowserWallet,
   discoverBrowserWallets,
+  isChainMintConfigured,
+  mintPassportOnChain,
   requestMintSignature,
   requestWalletAddress,
   requestWalletSignature
@@ -27,7 +29,16 @@ import {
 
 export const OnboardingClient = () => {
   const router = useRouter();
-  const { wallet, connectWallet, mintPassport, isConnected, passport, isLoading, error: storeError } = useRitual();
+  const {
+    wallet,
+    connectWallet,
+    mintPassport,
+    syncPassportFromChain,
+    isConnected,
+    passport,
+    isLoading,
+    error: storeError
+  } = useRitual();
   const [selectedClass, setSelectedClass] = useState(1);
   const [activeStep, setActiveStep] = useState<"class" | "mint">("class");
   const [connectedBrowserWallet, setConnectedBrowserWallet] = useState<BrowserWallet | null>(null);
@@ -36,6 +47,7 @@ export const OnboardingClient = () => {
   const [isDiscoveringWallets, setIsDiscoveringWallets] = useState(false);
   const [walletPickerError, setWalletPickerError] = useState("");
   const [mintError, setMintError] = useState("");
+  const chainMintEnabled = isChainMintConfigured();
 
   const refreshWallets = async () => {
     setIsDiscoveringWallets(true);
@@ -91,16 +103,22 @@ export const OnboardingClient = () => {
   const handleMintPassport = async () => {
     setMintError("");
     if (!wallet || !connectedBrowserWallet) {
-      setMintError("Reconnect your wallet so the mint signature can be requested.");
+      setMintError("Reconnect your wallet so the mint can be confirmed.");
       return;
     }
 
     try {
-      const mintSignature = await requestMintSignature(connectedBrowserWallet, wallet, selectedClassData.name);
-      await mintPassport(selectedClass, mintSignature);
+      if (chainMintEnabled) {
+        await mintPassportOnChain(connectedBrowserWallet, wallet, selectedClass);
+        await syncPassportFromChain();
+      } else {
+        const mintSignature = await requestMintSignature(connectedBrowserWallet, wallet, selectedClassData.name);
+        await mintPassport(selectedClass, mintSignature);
+      }
+
       router.push("/dashboard");
     } catch (error) {
-      setMintError(error instanceof Error ? error.message : "Mint signature failed");
+      setMintError(error instanceof Error ? error.message : "Passport mint failed");
     }
   };
 
@@ -233,8 +251,9 @@ export const OnboardingClient = () => {
               <ShieldCheck className="size-7 text-green" />
             </div>
             <p className="copy-muted mt-3">
-              Your wallet signs the mint confirmation, then the dashboard opens with this class and token identity
-              attached.
+              {chainMintEnabled
+                ? "Your wallet sends the PassportNFT mint transaction. After confirmation, the backend syncs the token from chain."
+                : "Your wallet signs a local mint confirmation, then the dashboard opens with this class and token identity attached."}
             </p>
             <div className="detail-cell mt-6 grid gap-3 p-4 font-mono text-sm">
               <div className="flex justify-between gap-3">
@@ -248,6 +267,10 @@ export const OnboardingClient = () => {
               <div className="flex justify-between gap-3">
                 <span className="text-muted">Initial stage</span>
                 <span>Genesis</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">Mint mode</span>
+                <span>{chainMintEnabled ? "On-chain transaction" : "Local demo signature"}</span>
               </div>
               <div className="flex justify-between gap-3">
                 <span className="text-muted">Transferability</span>
@@ -271,7 +294,7 @@ export const OnboardingClient = () => {
                 className="rune-button inline-flex flex-1 items-center justify-center gap-2 px-4 py-3 font-semibold button-press hover-lift disabled:opacity-50"
               >
                 <ShieldCheck className="size-4" />
-                {isLoading ? "Minting..." : "Sign and Mint Passport"}
+                {isLoading ? "Minting..." : chainMintEnabled ? "Send Mint Transaction" : "Sign and Mint Passport"}
               </button>
             </div>
           </section>

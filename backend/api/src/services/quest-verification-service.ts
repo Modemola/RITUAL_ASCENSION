@@ -1,10 +1,19 @@
 import { getQuest } from "@ritual/domain";
 import type { IdentityService } from "./identity-service.js";
 import { BuilderProofVerifier } from "./verification/builder-proof-verifier.js";
+import type { DiscordActivitySource, TestnetActivitySource } from "./verification/activity-sources.js";
+import { createActivitySources } from "./verification/activity-sources.js";
 import { DiscordActivityVerifier } from "./verification/discord-activity-verifier.js";
 import { DiscordRoleVerifier } from "./verification/discord-role-verifier.js";
 import { TestnetActivityVerifier } from "./verification/testnet-activity-verifier.js";
 import type { QuestVerifier } from "./verification/types.js";
+import type { VerificationConfig } from "../config.js";
+
+interface QuestVerificationOptions {
+  discordActivitySource?: DiscordActivitySource;
+  testnetActivitySource?: TestnetActivitySource;
+  verification?: VerificationConfig;
+}
 
 export class QuestVerificationService {
   private readonly builderProofVerifier: QuestVerifier;
@@ -12,11 +21,15 @@ export class QuestVerificationService {
   private readonly discordRoleVerifier: QuestVerifier;
   private readonly testnetActivityVerifier: QuestVerifier;
 
-  constructor(identityService: IdentityService) {
+  constructor(identityService: IdentityService, options: QuestVerificationOptions = {}) {
+    const activitySources = createActivitySources(options.verification);
+    const discordActivitySource = options.discordActivitySource ?? activitySources.discord;
+    const testnetActivitySource = options.testnetActivitySource ?? activitySources.testnet;
+
     this.builderProofVerifier = new BuilderProofVerifier(identityService);
-    this.discordActivityVerifier = new DiscordActivityVerifier(identityService);
-    this.discordRoleVerifier = new DiscordRoleVerifier(identityService);
-    this.testnetActivityVerifier = new TestnetActivityVerifier(identityService);
+    this.discordActivityVerifier = new DiscordActivityVerifier(identityService, discordActivitySource);
+    this.discordRoleVerifier = new DiscordRoleVerifier(identityService, discordActivitySource);
+    this.testnetActivityVerifier = new TestnetActivityVerifier(identityService, testnetActivitySource);
   }
 
   async verifyQuest(questId: string, wallet?: string, discordId?: string, proof?: string) {

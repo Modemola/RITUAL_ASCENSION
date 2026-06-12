@@ -18,6 +18,18 @@ export interface PassportData {
     classId: number;
     xp: number;
     stage: number;
+    achievements: Achievement[];
+    completedQuestIds: string[];
+    activeWeeks: number;
+    projectsCompleted: number;
+    agentsDeployed: number;
+    class?: {
+      id: number;
+      name: string;
+      focus: string;
+      achievement: string;
+      tone: string;
+    };
     reputation: number;
     level: number;
     levelProgress: { level: number; percent: number; nextXp: number };
@@ -32,6 +44,17 @@ export interface ProfileData {
     completedQuests: Quest[];
     identityLink?: IdentityLink | null;
   };
+}
+
+export interface ChainSyncData {
+  chainState: {
+    wallet: string;
+    tokenId: number;
+    classId: number;
+    stage: number;
+    xp: number;
+  };
+  passport: PassportData["passport"];
 }
 
 export interface OracleResponse {
@@ -322,6 +345,13 @@ export const apiClient = {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       body: JSON.stringify(payload),
+    }),
+
+  syncPassportFromChain: (wallet: string, token?: string) =>
+    apiFetch<ChainSyncData>(`/api/passport/sync-chain`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: JSON.stringify({ wallet }),
     }),
 
   // Get user profile

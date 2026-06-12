@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import type { ChainConfig } from "./config.js";
+import type { ChainConfig, OracleConfig, VerificationConfig } from "./config.js";
 import type { RitualChainClient } from "./chain/ritual-chain-client.js";
 import { json, prepareRequest, serverError } from "./http.js";
 import { handleApiRequest } from "./routes.js";
@@ -12,6 +12,8 @@ interface ApiServerOptions {
   chainClient?: RitualChainClient;
   databaseUrl?: string;
   jwtSecret?: string;
+  oracle?: OracleConfig;
+  verification?: VerificationConfig;
 }
 
 export function createApiServer(options: ApiServerOptions = {}) {

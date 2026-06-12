@@ -419,18 +419,11 @@ export async function handleApiRequest(
       return;
     }
 
-    json(response, 200, {
-      conversationId: "demo-conversation",
-      message: "Your next highest-leverage move is to finish the LLM precompile quest. It advances your passport toward the Builder stage and teaches the Ritual AI primitive directly.",
-      recommendedQuest: {
-        id: "llm-precompile",
-        title: "Call the Ritual LLM Precompile",
-        reason: "It is already in progress and unlocks the next evolution trigger."
-      },
-      learningOutcome: "You will learn how Ritual exposes AI execution through on-chain infrastructure.",
-      nextMilestone: "Confirm the transaction and push your passport into Stage 3.",
-      rateLimitRemaining: 19
+    const result = await services.oracle.chat({
+      wallet: authorization.wallet,
+      message: body.message
     });
+    json(response, result.ok ? 200 : result.statusCode, result.body);
     return;
   }
 

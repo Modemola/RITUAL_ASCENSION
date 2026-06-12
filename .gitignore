@@ -5,6 +5,7 @@ coverage
 .env
 .env.local
 .env.*.local
+*.log
 .tmp_prd
 *.tsbuildinfo
 Ritual_Ascension_PRD_v2.docx

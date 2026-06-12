@@ -5,13 +5,33 @@ export interface ApiConfig {
   databaseUrl?: string;
   environment: string;
   jwtSecret: string;
+  oracle: OracleConfig;
   port: number;
+  verification: VerificationConfig;
 }
 
 export interface ChainConfig {
   passportAddress?: string;
   progressAddress?: string;
   rpcUrl?: string;
+}
+
+export interface OracleConfig {
+  apiKey?: string;
+  endpoint?: string;
+  model: string;
+  provider: "local" | "openai-compatible";
+}
+
+export interface VerificationConfig {
+  discord?: {
+    apiKey?: string;
+    endpoint?: string;
+  };
+  testnet?: {
+    apiKey?: string;
+    endpoint?: string;
+  };
 }
 
 export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
@@ -26,7 +46,23 @@ export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     databaseUrl: env.DATABASE_URL,
     environment: env.NODE_ENV ?? "development",
     jwtSecret: env.JWT_SECRET ?? "ritual-ascension-local-dev-secret",
-    port: Number(env.PORT ?? 4000)
+    oracle: {
+      apiKey: env.ORACLE_API_KEY,
+      endpoint: env.ORACLE_ENDPOINT,
+      model: env.ORACLE_MODEL ?? "gpt-4.1-mini",
+      provider: env.ORACLE_PROVIDER === "openai-compatible" ? "openai-compatible" : "local"
+    },
+    port: Number(env.PORT ?? 4000),
+    verification: {
+      discord: {
+        apiKey: env.DISCORD_ACTIVITY_API_KEY,
+        endpoint: env.DISCORD_ACTIVITY_ENDPOINT
+      },
+      testnet: {
+        apiKey: env.RITUAL_TESTNET_INDEXER_API_KEY,
+        endpoint: env.RITUAL_TESTNET_INDEXER_ENDPOINT
+      }
+    }
   };
 }
 
@@ -50,6 +86,14 @@ export function validateApiConfig(config: ApiConfig) {
     config.allowedOrigins.includes("*")
   ) {
     issues.push("ALLOWED_ORIGINS must be restricted in production");
+  }
+
+  if (config.oracle.provider === "openai-compatible" && !config.oracle.apiKey) {
+    issues.push("ORACLE_API_KEY must be set when ORACLE_PROVIDER=openai-compatible");
+  }
+
+  if (config.oracle.provider === "openai-compatible" && !config.oracle.endpoint) {
+    issues.push("ORACLE_ENDPOINT must be set when ORACLE_PROVIDER=openai-compatible");
   }
 
   if (issues.length) {

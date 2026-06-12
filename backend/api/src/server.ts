@@ -8,7 +8,9 @@ const server = createApiServer({
   allowedOrigins: config.allowedOrigins,
   chain: config.chain,
   databaseUrl: config.databaseUrl,
-  jwtSecret: config.jwtSecret
+  jwtSecret: config.jwtSecret,
+  oracle: config.oracle,
+  verification: config.verification
 });
 
 server.listen(config.port, () => {
