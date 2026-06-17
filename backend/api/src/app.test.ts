@@ -133,6 +133,13 @@ describe("Ritual Ascension API", () => {
     assert.equal(body.contracts.progress, "ProgressManager");
   });
 
+  it("reports when local Oracle chain intelligence is not configured", async () => {
+    const { response, body } = await apiFetch("/api/oracle/chain-intelligence");
+
+    assert.equal(response.status, 503);
+    assert.equal(body.error, "ChainIntelligenceNotConfigured");
+  });
+
   it("issues wallet auth challenges and bearer tokens", async () => {
     const wallet = Wallet.createRandom();
     const token = await authenticateWallet(wallet);
@@ -532,6 +539,9 @@ describe("Ritual Ascension API", () => {
     assert.equal(body.recommendedQuest.id, "llm-precompile");
     assert.equal(typeof body.learningOutcome, "string");
     assert.equal(typeof body.nextMilestone, "string");
+    assert(body.sources.some((source: { id: string }) => source.id === "ritual-basics"));
+    assert(body.sources.some((source: { id: string }) => source.id === "demo-discord-intelligence"));
+    assert(body.sourceNotes.some((note: string) => note.includes("Discord intelligence endpoint is not configured")));
   });
 
   it("returns a clear error when chain sync is not configured", async () => {

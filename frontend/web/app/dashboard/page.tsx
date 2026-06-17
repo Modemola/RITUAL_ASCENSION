@@ -23,7 +23,8 @@ export default function DashboardPage() {
 
   return (
     <PrivateGate>
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <main className="art-surface mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <div aria-hidden="true" className="art-bg art-bg--passport art-bg--dashboard-page" />
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end fade-in">
         <div>
           <p className="text-cipher text-xs uppercase tracking-[0.22em]">Builder dashboard</p>
@@ -50,7 +51,6 @@ export default function DashboardPage() {
           <Skeleton height={460} className="min-h-[460px]" />
         ) : (
           <section className="passport-art art-surface pulse-rune min-h-[460px] border border-cyan/25 p-5 text-white shadow-rune scale-in">
-            <div aria-hidden="true" className="art-bg art-bg--passport art-bg--panel" />
             <div className="passport-frame flex h-full flex-col justify-between p-5">
               <div className="flex items-start justify-between">
                 <div className="slide-up-delay">

@@ -64,6 +64,15 @@ export interface OracleResponse {
   learningOutcome: string;
   nextMilestone: string;
   rateLimitRemaining: number;
+  source?: string;
+  sourceNotes?: string[];
+  sources?: Array<{
+    id: string;
+    label: string;
+    kind: "ritual_docs" | "chain" | "discord" | "passport" | "quests" | "products" | "indexer";
+    freshness: "static" | "live" | "demo" | "unconfigured";
+    summary: string;
+  }>;
 }
 
 export interface LeaderboardEntry {

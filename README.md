@@ -92,6 +92,34 @@ ORACLE_API_KEY=...
 
 The provider should return JSON with `message`, `recommendedQuest`, `learningOutcome`, and `nextMilestone`; malformed or unavailable provider responses fall back to the local mentor.
 
+## Oracle Knowledge Sources
+
+The Oracle now accepts live knowledge sources so it can answer Ritual docs, chain, Discord, contributor, quest, and passport questions from grounded context instead of guessing. Without these sources, it still uses local Ritual Ascension facts plus demo chain/Discord context.
+
+```bash
+ORACLE_DOCS_ENDPOINT=https://...
+ORACLE_DOCS_API_KEY=...
+ORACLE_DISCORD_ENDPOINT=https://...
+ORACLE_DISCORD_API_KEY=...
+ORACLE_INDEXER_ENDPOINT=https://...
+ORACLE_INDEXER_API_KEY=...
+RITUAL_INDEXER_LOOKBACK_BLOCKS=100000
+```
+
+Each endpoint should accept query parameters and return either `{ "summary": "...", "data": ... }` or `{ "source": { "id": "...", "label": "...", "kind": "...", "freshness": "live", "summary": "...", "data": ... } }`.
+
+- `ORACLE_DOCS_ENDPOINT`: a Ritual docs search/RAG service. Build it from official Ritual docs, product docs, FAQs, contract/precompile docs, and curated project notes.
+- `ORACLE_DISCORD_ENDPOINT`: a server-side Discord intelligence service. It should aggregate scheduled events, role counts, member role lookup, contributor summaries, channel activity summaries, and linked Discord context. Keep raw bot tokens server-side only.
+- `ORACLE_INDEXER_ENDPOINT`: a Ritual chain intelligence service. It should summarize wallet transactions, deployments, contract interactions, PassportNFT events, ProgressManager events, precompile calls, and ecosystem activity.
+
+For local development, this backend exposes a built-in chain intelligence endpoint:
+
+```bash
+ORACLE_INDEXER_ENDPOINT=http://localhost:4000/api/oracle/chain-intelligence
+```
+
+It reads the configured Ritual RPC plus `PASSPORT_NFT_ADDRESS` and `PROGRESS_MANAGER_ADDRESS`, then returns wallet passport state, XP, latest block, and recent Passport/Progress event counts.
+
 ## Verification Sources
 
 Quest verification uses demo activity sources unless live endpoints are configured:

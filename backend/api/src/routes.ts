@@ -48,6 +48,14 @@ export async function handleApiRequest(
     return;
   }
 
+  if (url.pathname === "/api/oracle/chain-intelligence" && request.method === "GET") {
+    const result = await services.chainIntelligence.summarize({
+      wallet: url.searchParams.get("wallet") ?? undefined
+    });
+    json(response, result.ok ? 200 : result.statusCode, result.body);
+    return;
+  }
+
   if (url.pathname === "/api/auth/nonce" && request.method === "POST") {
     const body = await readBody(request) as { wallet?: string };
     const result = await services.auth.createChallenge(body.wallet ?? "");

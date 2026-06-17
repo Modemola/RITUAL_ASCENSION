@@ -29,7 +29,7 @@ export class EthersRitualChainClient implements RitualChainClient {
   private readonly passport: Contract;
   private readonly progress: Contract;
 
-  constructor(config: Required<ChainConfig>) {
+  constructor(config: Required<Pick<ChainConfig, "passportAddress" | "progressAddress" | "rpcUrl">>) {
     const provider = new JsonRpcProvider(config.rpcUrl);
     this.passport = new Contract(config.passportAddress, passportNftAbi, provider);
     this.progress = new Contract(config.progressAddress, progressManagerAbi, provider);

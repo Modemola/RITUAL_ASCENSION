@@ -104,6 +104,11 @@ textarea:focus-visible {
   z-index: 1;
 }
 
+.rune-panel--scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 .art-bg {
   pointer-events: none;
   position: absolute;
@@ -164,10 +169,23 @@ textarea:focus-visible {
   mask-image: radial-gradient(ellipse 82% 68% at 50% 14%, black 12%, transparent 80%);
 }
 
+.art-bg--dashboard-page {
+  position: fixed;
+  background-position: center;
+  background-size: min(760px, 78vw) auto;
+  opacity: 0.12;
+  mix-blend-mode: screen;
+  mask-image: radial-gradient(ellipse 64% 58% at 50% 50%, black 18%, transparent 82%);
+}
+
 .art-surface {
   position: relative;
   overflow: hidden;
   isolation: isolate;
+}
+
+.art-surface--visible {
+  overflow: visible;
 }
 
 .art-surface > :not(.art-bg):not(.fixed) {

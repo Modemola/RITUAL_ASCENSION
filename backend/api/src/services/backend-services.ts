@@ -32,9 +32,11 @@ import {
 } from "../repositories/review-record-repository.js";
 import { AdminReviewService } from "./admin-review-service.js";
 import { AuthService } from "./auth-service.js";
+import { ChainIntelligenceService } from "./chain-intelligence-service.js";
 import { ChainSyncService } from "./chain-sync-service.js";
 import { IdentityService } from "./identity-service.js";
 import { NotificationService } from "./notification-service.js";
+import { OracleKnowledgeService } from "./oracle-knowledge-service.js";
 import { OracleService } from "./oracle-service.js";
 import { PassportService } from "./passport-service.js";
 import { ProgressionService } from "./progression-service.js";
@@ -56,6 +58,7 @@ interface BackendServiceOptions {
 export interface BackendServices {
   adminReviews: AdminReviewService;
   auth: AuthService;
+  chainIntelligence: ChainIntelligenceService;
   chainSync: ChainSyncService;
   identity: IdentityService;
   notifications: NotificationService;
@@ -105,23 +108,32 @@ export function createBackendServices(options: BackendServiceOptions = {}): Back
   const passport = new PassportService(passports);
   const quests = new QuestEngineService(questAttempts, questVerification, progression, adminReviews);
 
+  const chain = options.chain ?? {};
+
   return {
     adminReviews,
     auth: new AuthService(
       authChallenges,
       new TokenService(options.jwtSecret ?? "ritual-ascension-local-dev-secret")
     ),
+    chainIntelligence: new ChainIntelligenceService(chain, passport),
     chainSync: new ChainSyncService(
-      options.chainClient ?? createRitualChainClient(options.chain ?? {}),
+      options.chainClient ?? createRitualChainClient(chain),
       passports
     ),
     identity,
     notifications: new NotificationService(progressionRepository),
-    oracle: new OracleService(passport, quests, options.oracle),
+    oracle: new OracleService(
+      passport,
+      quests,
+      identity,
+      new OracleKnowledgeService(options.oracle?.knowledge, chain),
+      options.oracle
+    ),
     passport,
     progression,
     quests,
     questVerification,
-    readiness: new ReadinessService(pool, options.chain)
+    readiness: new ReadinessService(pool, chain)
   };
 }

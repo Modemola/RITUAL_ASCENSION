@@ -11,6 +11,9 @@ describe("API config", () => {
       ORACLE_MODEL: "ritual-mentor",
       ORACLE_PROVIDER: "openai-compatible",
       ORACLE_API_KEY: "test-key",
+      ORACLE_DOCS_ENDPOINT: "https://docs-search.example/query",
+      ORACLE_DISCORD_ENDPOINT: "https://discord-intel.example/query",
+      ORACLE_INDEXER_ENDPOINT: "https://indexer-intel.example/query",
       PORT: "4010",
       JWT_SECRET: "dev-secret"
     } as NodeJS.ProcessEnv);
@@ -20,6 +23,9 @@ describe("API config", () => {
     assert.equal(config.oracle.provider, "openai-compatible");
     assert.equal(config.oracle.endpoint, "https://llm.example/v1/chat/completions");
     assert.equal(config.oracle.model, "ritual-mentor");
+    assert.equal(config.oracle.knowledge?.docs?.endpoint, "https://docs-search.example/query");
+    assert.equal(config.oracle.knowledge?.discord?.endpoint, "https://discord-intel.example/query");
+    assert.equal(config.oracle.knowledge?.indexer?.endpoint, "https://indexer-intel.example/query");
     assert.equal(config.port, 4010);
   });
 

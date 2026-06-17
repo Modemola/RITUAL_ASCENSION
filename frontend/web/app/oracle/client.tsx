@@ -4,7 +4,7 @@ import { Send } from "lucide-react";
 import { useRitual } from "@/lib/store";
 import { useAsync, useForm } from "@/lib/hooks";
 import { apiClient } from "@/lib/api";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LoadingSpinner, Toast } from "@/lib/components";
 
 interface Message {
@@ -18,6 +18,7 @@ export const OracleClient = () => {
   const { wallet, authToken, isConnected } = useRitual();
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const { execute: sendMessage, status } = useAsync(async (content: string) => {
     if (!wallet) throw new Error("Wallet not connected");
@@ -57,8 +58,12 @@ export const OracleClient = () => {
     }
   );
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: "end" });
+  }, [messages.length, status]);
+
   return (
-    <main className="art-surface relative mx-auto max-w-4xl overflow-hidden px-4 py-8 sm:px-6">
+    <main className="art-surface art-surface--visible relative mx-auto flex min-h-[calc(100vh-73px)] max-w-4xl flex-col px-4 py-8 sm:px-6">
       <div aria-hidden="true" className="art-bg art-bg--oracle art-bg--page" />
       <header className="relative z-10 mb-8 fade-in">
         <p className="text-cipher text-xs uppercase tracking-[0.22em]">Divine Council</p>
@@ -74,9 +79,9 @@ export const OracleClient = () => {
           <p className="text-muted">Connect your wallet to commune with the oracle.</p>
         </div>
       ) : (
-        <>
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col">
           {/* Messages Container */}
-          <div className="rune-panel relative z-10 mb-6 max-h-96 space-y-4 overflow-y-auto p-6 fade-in-delay-1">
+          <div className="rune-panel rune-panel--scroll mb-6 h-[min(58vh,34rem)] min-h-80 space-y-4 p-6 fade-in-delay-1">
             <div className="motion-lattice pointer-events-none absolute inset-x-6 top-4 h-16 opacity-35" aria-hidden="true" />
             {messages.length === 0 ? (
               <div className="text-center text-muted py-8">
@@ -88,8 +93,8 @@ export const OracleClient = () => {
                   key={msg.id}
                   className={`animate-fade-in ${
                     msg.role === "user"
-                      ? "ml-auto max-w-xs bg-cyan/10 border-cyan/30"
-                      : "max-w-xs bg-purple/10 border-purple/30"
+                      ? "ml-auto max-w-[85%] bg-cyan/10 border-cyan/30 sm:max-w-md"
+                      : "max-w-[85%] bg-purple/10 border-purple/30 sm:max-w-md"
                   } border rounded-lg p-3 float-message`}
                 >
                   <p className="text-xs font-mono uppercase mb-1 opacity-60">
@@ -104,6 +109,7 @@ export const OracleClient = () => {
                 <LoadingSpinner size="sm" />
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Input Form */}
@@ -144,7 +150,7 @@ export const OracleClient = () => {
               onClose={() => setError("")}
             />
           )}
-        </>
+        </div>
       )}
     </main>
   );

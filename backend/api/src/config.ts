@@ -11,6 +11,8 @@ export interface ApiConfig {
 }
 
 export interface ChainConfig {
+  chainId?: string;
+  indexerLookbackBlocks?: number;
   passportAddress?: string;
   progressAddress?: string;
   rpcUrl?: string;
@@ -19,8 +21,24 @@ export interface ChainConfig {
 export interface OracleConfig {
   apiKey?: string;
   endpoint?: string;
+  knowledge?: OracleKnowledgeConfig;
   model: string;
   provider: "local" | "openai-compatible";
+}
+
+export interface OracleKnowledgeConfig {
+  discord?: {
+    apiKey?: string;
+    endpoint?: string;
+  };
+  docs?: {
+    apiKey?: string;
+    endpoint?: string;
+  };
+  indexer?: {
+    apiKey?: string;
+    endpoint?: string;
+  };
 }
 
 export interface VerificationConfig {
@@ -39,6 +57,8 @@ export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     adminWallets: parseAdminWallets(env.ADMIN_WALLETS),
     allowedOrigins: parseList(env.ALLOWED_ORIGINS, ["*"]),
     chain: {
+      chainId: env.RITUAL_CHAIN_ID,
+      indexerLookbackBlocks: Number(env.RITUAL_INDEXER_LOOKBACK_BLOCKS ?? 100_000),
       passportAddress: env.PASSPORT_NFT_ADDRESS,
       progressAddress: env.PROGRESS_MANAGER_ADDRESS,
       rpcUrl: env.RITUAL_RPC_URL
@@ -49,6 +69,20 @@ export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     oracle: {
       apiKey: env.ORACLE_API_KEY,
       endpoint: env.ORACLE_ENDPOINT,
+      knowledge: {
+        discord: {
+          apiKey: env.ORACLE_DISCORD_API_KEY ?? env.DISCORD_ACTIVITY_API_KEY,
+          endpoint: env.ORACLE_DISCORD_ENDPOINT
+        },
+        docs: {
+          apiKey: env.ORACLE_DOCS_API_KEY,
+          endpoint: env.ORACLE_DOCS_ENDPOINT
+        },
+        indexer: {
+          apiKey: env.ORACLE_INDEXER_API_KEY ?? env.RITUAL_TESTNET_INDEXER_API_KEY,
+          endpoint: env.ORACLE_INDEXER_ENDPOINT
+        }
+      },
       model: env.ORACLE_MODEL ?? "gpt-4.1-mini",
       provider: env.ORACLE_PROVIDER === "openai-compatible" ? "openai-compatible" : "local"
     },

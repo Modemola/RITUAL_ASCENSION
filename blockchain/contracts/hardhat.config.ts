@@ -1,3 +1,4 @@
+import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
 import { HardhatUserConfig } from "hardhat/config";
 
 const networks: HardhatUserConfig["networks"] = {
@@ -16,6 +17,7 @@ if (process.env.RITUAL_RPC_URL) {
 }
 
 const config: HardhatUserConfig = {
+  plugins: [hardhatToolboxViemPlugin],
   paths: {
     sources: "./src",
     tests: "./test",

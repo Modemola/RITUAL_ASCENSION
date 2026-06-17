@@ -6,6 +6,12 @@ import {
 } from "@ritual/domain";
 import type { PassportProfile, Quest } from "@ritual/domain";
 import type { OracleConfig } from "../config.js";
+import type { IdentityService } from "./identity-service.js";
+import {
+  OracleKnowledgeService,
+  type OracleKnowledgeBundle,
+  type OracleKnowledgeSource
+} from "./oracle-knowledge-service.js";
 import type { PassportService } from "./passport-service.js";
 import type { QuestEngineService } from "./quest-engine-service.js";
 
@@ -24,12 +30,15 @@ interface OracleProviderResponse {
   };
   learningOutcome?: string;
   nextMilestone?: string;
+  sourceNotes?: string[];
 }
 
 export class OracleService {
   constructor(
     private readonly passport: PassportService,
     private readonly questsService: QuestEngineService,
+    private readonly identity: IdentityService,
+    private readonly knowledge: OracleKnowledgeService = new OracleKnowledgeService(),
     private readonly config: OracleConfig = { provider: "local", model: "local-ritual-mentor" }
   ) {}
 
@@ -47,11 +56,17 @@ export class OracleService {
     }
 
     const attempts = await this.questsService.listAttempts(input.wallet);
+    const identityLink = await this.identity.getIdentityLink(input.wallet);
     const context = buildOracleContext(passport, attempts.map((attempt) => attempt.questId));
+    const knowledgeBundle = await this.knowledge.buildContext({
+      identityLink,
+      message: input.message ?? "",
+      wallet: input.wallet
+    });
     const providerResponse = this.config.provider === "openai-compatible"
-      ? await this.askOpenAiCompatibleProvider(input.message ?? "", context).catch(() => null)
+      ? await this.askOpenAiCompatibleProvider(input.message ?? "", context, knowledgeBundle).catch(() => null)
       : null;
-    const response = providerResponse ?? buildLocalOracleResponse(input.message ?? "", context);
+    const response = providerResponse ?? buildLocalOracleResponse(input.message ?? "", context, knowledgeBundle);
 
     return {
       ok: true as const,
@@ -61,13 +76,19 @@ export class OracleService {
         recommendedQuest: response.recommendedQuest ?? toRecommendedQuest(context.recommendedQuest),
         learningOutcome: response.learningOutcome ?? getLearningOutcome(context.recommendedQuest),
         nextMilestone: response.nextMilestone ?? getNextMilestone(passport),
+        sources: summarizeSources(knowledgeBundle.sources),
+        sourceNotes: response.sourceNotes ?? buildSourceNotes(knowledgeBundle),
         rateLimitRemaining: this.config.provider === "local" ? 99 : 19,
         source: providerResponse ? this.config.provider : "local"
       }
     };
   }
 
-  private async askOpenAiCompatibleProvider(message: string, context: OracleContext): Promise<OracleProviderResponse | null> {
+  private async askOpenAiCompatibleProvider(
+    message: string,
+    context: OracleContext,
+    knowledgeBundle: OracleKnowledgeBundle
+  ): Promise<OracleProviderResponse | null> {
     if (!this.config.endpoint || !this.config.apiKey) return null;
 
     const response = await fetch(this.config.endpoint, {
@@ -84,8 +105,11 @@ export class OracleService {
             role: "system",
             content: [
               "You are the Ritual Ascension Oracle Mentor.",
-              "Recommend exactly one existing quest from the provided context.",
-              "Return JSON with message, recommendedQuest, learningOutcome, and nextMilestone."
+              "Answer questions about Ritual only from the provided knowledge sources and passport context.",
+              "Use Ritual docs, chain, Discord, contributor, quest, and passport sources when present.",
+              "If live data is unavailable, say which source is unconfigured instead of inventing facts.",
+              "Recommend exactly one existing quest when a progression recommendation is useful.",
+              "Return JSON with message, recommendedQuest, learningOutcome, nextMilestone, and sourceNotes."
             ].join(" ")
           },
           {
@@ -93,6 +117,9 @@ export class OracleService {
             content: JSON.stringify({
               userMessage: message,
               passport: context.passportSummary,
+              queryIntent: knowledgeBundle.queryIntent,
+              knowledgeSources: knowledgeBundle.sources,
+              unavailableSources: knowledgeBundle.unavailable,
               recommendedQuest: context.recommendedQuest,
               availableQuests: context.availableQuests.slice(0, 8)
             })
@@ -132,7 +159,10 @@ interface OracleContext {
   recommendedQuest: Quest;
 }
 
-function buildOracleContext(passport: ReturnType<PassportService["getPassport"]> extends Promise<infer T> ? NonNullable<T> : PassportProfile, attemptedQuestIds: string[]): OracleContext {
+function buildOracleContext(
+  passport: ReturnType<PassportService["getPassport"]> extends Promise<infer T> ? NonNullable<T> : PassportProfile,
+  attemptedQuestIds: string[]
+): OracleContext {
   const completedQuestIds = new Set(passport.completedQuestIds ?? []);
   const attempted = new Set(attemptedQuestIds);
   const availableQuests = quests.filter((quest) => !completedQuestIds.has(quest.id));
@@ -160,20 +190,68 @@ function buildOracleContext(passport: ReturnType<PassportService["getPassport"]>
   };
 }
 
-function buildLocalOracleResponse(userMessage: string, context: OracleContext): OracleProviderResponse {
+function buildLocalOracleResponse(
+  userMessage: string,
+  context: OracleContext,
+  knowledgeBundle: OracleKnowledgeBundle
+): OracleProviderResponse {
   const quest = context.recommendedQuest;
   const className = context.passportSummary.className;
   const promptSignal = userMessage.trim()
     ? `I heard the shape of your question: "${userMessage.trim().slice(0, 140)}".`
     : "You did not ask for a specific direction, so I am optimizing for the next progression unlock.";
+  const sourceSignal = describeKnowledgeSignal(knowledgeBundle);
 
   return {
     conversationId: "local-oracle",
-    message: `${promptSignal} As a ${className}, your highest-leverage next move is ${quest.title}. It is worth ${quest.xp} XP and fits your current Stage ${context.passportSummary.stage} passport progression.`,
+    message: `${promptSignal} ${sourceSignal} As a ${className}, your highest-leverage next move is ${quest.title}. It is worth ${quest.xp} XP and fits your current Stage ${context.passportSummary.stage} passport progression.`,
     recommendedQuest: toRecommendedQuest(quest),
     learningOutcome: getLearningOutcome(quest),
-    nextMilestone: getNextMilestoneFromQuest(quest)
+    nextMilestone: getNextMilestoneFromQuest(quest),
+    sourceNotes: buildSourceNotes(knowledgeBundle)
   };
+}
+
+function describeKnowledgeSignal(knowledgeBundle: OracleKnowledgeBundle) {
+  if (knowledgeBundle.queryIntent === "discord" || knowledgeBundle.queryIntent === "contributor") {
+    const discordSource = knowledgeBundle.sources.find((source) => source.kind === "discord");
+    return discordSource?.freshness === "live"
+      ? "I checked the configured Ritual Discord intelligence source."
+      : "Live Discord intelligence is not configured yet, so I can only use demo/community schema context.";
+  }
+
+  if (knowledgeBundle.queryIntent === "chain") {
+    const chainSource = knowledgeBundle.sources.find((source) => source.kind === "indexer" && source.freshness === "live");
+    return chainSource
+      ? "I checked the configured Ritual chain intelligence source."
+      : "Live chain/indexer intelligence is not configured yet, so I can only use local chain configuration and demo activity context.";
+  }
+
+  if (knowledgeBundle.queryIntent === "ritual_docs") {
+    const docsSource = knowledgeBundle.sources.find((source) => source.id === "ritual-docs-live");
+    return docsSource
+      ? "I checked the configured Ritual docs source."
+      : "Live docs search is not configured yet, so I can only use the local Ritual Ascension facts bundled with the app.";
+  }
+
+  return "I gathered the available Ritual context for your wallet, quests, chain configuration, and community sources.";
+}
+
+function summarizeSources(sources: OracleKnowledgeSource[]) {
+  return sources.map((source) => ({
+    id: source.id,
+    label: source.label,
+    kind: source.kind,
+    freshness: source.freshness,
+    summary: source.summary
+  }));
+}
+
+function buildSourceNotes(knowledgeBundle: OracleKnowledgeBundle) {
+  const notes = knowledgeBundle.sources.map((source) =>
+    `${source.label}: ${source.freshness} source`
+  );
+  return [...notes, ...knowledgeBundle.unavailable];
 }
 
 function toRecommendedQuest(quest: Quest) {
