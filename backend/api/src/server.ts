@@ -1,6 +1,10 @@
 import { createApiServer } from "./app.js";
 import { getApiConfig, validateApiConfig } from "./config.js";
 
+try {
+  process.loadEnvFile(new URL("../../../.env", import.meta.url));
+} catch { /* .env not present, use process.env as-is */ }
+
 const config = getApiConfig();
 validateApiConfig(config);
 const server = createApiServer({

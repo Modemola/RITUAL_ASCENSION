@@ -1,0 +1,90 @@
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile contracts
+        run: npm run build:contracts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test API
+        run: npm test -w backend/api
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build app packages
+        run: npm run build
+
+  deploy-vercel:
+    name: Deploy frontend to Vercel
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Pull Vercel environment
+        run: npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Vercel output
+        run: npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        run: npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  deploy-render:
+    name: Deploy backend to Render
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Trigger Render deploy hook
+        run: curl --fail --request POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"

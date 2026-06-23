@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import {
   getBuilderClass,
   getLevelProgress,
@@ -63,9 +64,38 @@ export class OracleService {
       message: input.message ?? "",
       wallet: input.wallet
     });
-    const providerResponse = this.config.provider === "openai-compatible"
-      ? await this.askOpenAiCompatibleProvider(input.message ?? "", context, knowledgeBundle).catch(() => null)
-      : null;
+    let providerResponse: OracleProviderResponse | null = null;
+    if (this.config.provider === "openai-compatible") {
+      providerResponse = await this.askOpenAiCompatibleProvider(input.message ?? "", context, knowledgeBundle).catch((err) => {
+        console.error(JSON.stringify({ level: "error", event: "oracle_provider_error", message: err instanceof Error ? err.message : String(err) }));
+        return null;
+      });
+      if (!providerResponse) {
+        return {
+          ok: false as const,
+          statusCode: 502,
+          body: {
+            error: "OracleProviderFailed",
+            message: "The Oracle provider did not return a valid response. Check ORACLE_ENDPOINT, ORACLE_API_KEY, and ORACLE_MODEL in your environment."
+          }
+        };
+      }
+    } else if (this.config.provider === "anthropic") {
+      providerResponse = await this.askAnthropicProvider(input.message ?? "", context, knowledgeBundle).catch((err) => {
+        console.error(JSON.stringify({ level: "error", event: "oracle_provider_error", message: err instanceof Error ? err.message : String(err) }));
+        return null;
+      });
+      if (!providerResponse) {
+        return {
+          ok: false as const,
+          statusCode: 502,
+          body: {
+            error: "OracleProviderFailed",
+            message: "The Oracle provider did not return a valid response. Check ORACLE_API_KEY and ORACLE_MODEL in your environment."
+          }
+        };
+      }
+    }
     const response = providerResponse ?? buildLocalOracleResponse(input.message ?? "", context, knowledgeBundle);
 
     return {
@@ -128,18 +158,94 @@ export class OracleService {
       })
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      console.error(JSON.stringify({ level: "error", event: "oracle_provider_http_error", status: response.status, body }));
+      return null;
+    }
 
     const data = await response.json() as {
       choices?: Array<{ message?: { content?: string } }>;
     };
     const content = data.choices?.[0]?.message?.content;
-    if (!content) return null;
+    if (!content) {
+      console.error(JSON.stringify({ level: "error", event: "oracle_provider_empty_content", data }));
+      return null;
+    }
 
     try {
       const parsed = JSON.parse(content) as Partial<OracleProviderResponse>;
-      return typeof parsed.message === "string" ? parsed as OracleProviderResponse : null;
+      if (typeof parsed.message !== "string") {
+        console.error(JSON.stringify({ level: "error", event: "oracle_provider_invalid_json", content }));
+        return null;
+      }
+      return parsed as OracleProviderResponse;
     } catch {
+      console.error(JSON.stringify({ level: "error", event: "oracle_provider_json_parse_error", content }));
+      return null;
+    }
+  }
+
+  private async askAnthropicProvider(
+    message: string,
+    context: OracleContext,
+    knowledgeBundle: OracleKnowledgeBundle
+  ): Promise<OracleProviderResponse | null> {
+    if (!this.config.apiKey) return null;
+
+    const client = new Anthropic({ apiKey: this.config.apiKey });
+
+    const response = await client.messages.create({
+      model: this.config.model,
+      max_tokens: 2048,
+      system: [
+        "You are the Ritual Ascension Oracle Mentor.",
+        "Answer questions about Ritual only from the provided knowledge sources and passport context.",
+        "Use Ritual docs, chain, Discord, contributor, quest, and passport sources when present.",
+        "If live data is unavailable, say which source is unconfigured instead of inventing facts.",
+        "Recommend exactly one existing quest when a progression recommendation is useful.",
+        "Return ONLY valid JSON with fields: message (string), recommendedQuest ({id, title, reason}), learningOutcome (string), nextMilestone (string), sourceNotes (string[]).",
+        "Do not include markdown fences or any text outside the JSON object."
+      ].join(" "),
+      messages: [
+        {
+          role: "user",
+          content: JSON.stringify({
+            userMessage: message,
+            passport: context.passportSummary,
+            queryIntent: knowledgeBundle.queryIntent,
+            knowledgeSources: knowledgeBundle.sources,
+            unavailableSources: knowledgeBundle.unavailable,
+            recommendedQuest: context.recommendedQuest,
+            availableQuests: context.availableQuests.slice(0, 8)
+          })
+        }
+      ]
+    });
+
+    const textBlock = response.content.find((block) => block.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+      console.error(JSON.stringify({ level: "error", event: "oracle_provider_empty_content" }));
+      return null;
+    }
+
+    const raw = textBlock.text.trim();
+    const jsonStart = raw.indexOf("{");
+    const jsonEnd = raw.lastIndexOf("}");
+    if (jsonStart === -1 || jsonEnd === -1) {
+      console.error(JSON.stringify({ level: "error", event: "oracle_provider_no_json_object", raw }));
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1)) as Partial<OracleProviderResponse>;
+      if (typeof parsed.message !== "string") {
+        console.error(JSON.stringify({ level: "error", event: "oracle_provider_invalid_json", raw }));
+        return null;
+      }
+      return parsed as OracleProviderResponse;
+    } catch {
+      console.error(JSON.stringify({ level: "error", event: "oracle_provider_json_parse_error", raw }));
       return null;
     }
   }

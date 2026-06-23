@@ -23,7 +23,7 @@ export interface OracleConfig {
   endpoint?: string;
   knowledge?: OracleKnowledgeConfig;
   model: string;
-  provider: "local" | "openai-compatible";
+  provider: "local" | "openai-compatible" | "anthropic";
 }
 
 export interface OracleKnowledgeConfig {
@@ -83,8 +83,12 @@ export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
           endpoint: env.ORACLE_INDEXER_ENDPOINT
         }
       },
-      model: env.ORACLE_MODEL ?? "gpt-4.1-mini",
-      provider: env.ORACLE_PROVIDER === "openai-compatible" ? "openai-compatible" : "local"
+      model: env.ORACLE_MODEL ?? (env.ORACLE_PROVIDER === "anthropic" ? "claude-opus-4-8" : "gpt-4.1-mini"),
+      provider: env.ORACLE_PROVIDER === "openai-compatible"
+        ? "openai-compatible"
+        : env.ORACLE_PROVIDER === "anthropic"
+          ? "anthropic"
+          : "local"
     },
     port: Number(env.PORT ?? 4000),
     verification: {
@@ -128,6 +132,10 @@ export function validateApiConfig(config: ApiConfig) {
 
   if (config.oracle.provider === "openai-compatible" && !config.oracle.endpoint) {
     issues.push("ORACLE_ENDPOINT must be set when ORACLE_PROVIDER=openai-compatible");
+  }
+
+  if (config.oracle.provider === "anthropic" && !config.oracle.apiKey) {
+    issues.push("ORACLE_API_KEY must be set when ORACLE_PROVIDER=anthropic");
   }
 
   if (issues.length) {
