@@ -93,7 +93,8 @@ export const OnboardingClient = () => {
   const handlePrepareMint = () => {
     setMintError("");
     if (!isConnected) {
-      setMintError("Connect and sign with your wallet before minting.");
+      // Open the wallet modal instead of showing a silent error
+      openWalletModal();
       return;
     }
 
@@ -102,17 +103,30 @@ export const OnboardingClient = () => {
 
   const handleMintPassport = async () => {
     setMintError("");
-    if (!wallet || !connectedBrowserWallet) {
-      setMintError("Reconnect your wallet so the mint can be confirmed.");
+    if (!wallet) {
+      setMintError("Connect your wallet before minting.");
+      return;
+    }
+
+    // Re-discover if the browser wallet state was lost (e.g. page refresh after session restore)
+    let browserWallet = connectedBrowserWallet;
+    if (!browserWallet) {
+      const found = await discoverBrowserWallets();
+      browserWallet = found[0] ?? null;
+      if (browserWallet) setConnectedBrowserWallet(browserWallet);
+    }
+
+    if (!browserWallet) {
+      setMintError("No wallet extension found. Unlock MetaMask or another EVM wallet and try again.");
       return;
     }
 
     try {
       if (chainMintEnabled) {
-        await mintPassportOnChain(connectedBrowserWallet, wallet, selectedClass);
+        await mintPassportOnChain(browserWallet, wallet, selectedClass);
         await syncPassportFromChain();
       } else {
-        const mintSignature = await requestMintSignature(connectedBrowserWallet, wallet, selectedClassData.name);
+        const mintSignature = await requestMintSignature(browserWallet, wallet, selectedClassData.name);
         await mintPassport(selectedClass, mintSignature);
       }
 

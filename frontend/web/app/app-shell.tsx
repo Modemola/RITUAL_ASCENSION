@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Award, Bot, ChevronDown, CircleGauge, LayoutDashboard, ListChecks, Trophy, Wallet } from "lucide-react";
-import { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, Award, Bot, ChevronDown, CircleGauge, LayoutDashboard, ListChecks, RefreshCw, ShieldCheck, Trophy, Wallet } from "lucide-react";
+import { ReactNode, useState } from "react";
 import { appProgress, demoPassport } from "@/lib/data";
 import { useRitual } from "@/lib/store";
-import { useState } from "react";
+import { apiClient } from "@/lib/api";
+import { discoverBrowserWallets, requestWalletAddress, requestWalletSignature, BrowserWallet } from "@/lib/wallets";
+import { LoadingSpinner, Modal } from "@/lib/components";
+import { RitualSurface } from "@/components/ui/ritual-surface";
+
+const ADMIN_WALLET = (process.env.NEXT_PUBLIC_ADMIN_WALLET ?? "").toLowerCase();
 
 const privateNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -16,19 +22,75 @@ const privateNavItems = [
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { wallet, isConnected, passport, disconnectWallet } = useRitual();
+  const { wallet, isConnected, passport, connectWallet, disconnectWallet } = useRitual();
+  const router = useRouter();
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [connectWallets, setConnectWallets] = useState<BrowserWallet[]>([]);
+  const [connectScanning, setConnectScanning] = useState(false);
+  const [connectError, setConnectError] = useState("");
+  const [connectingId, setConnectingId] = useState<string | null>(null);
   const hasPrivateAccess = isConnected && Boolean(passport);
+  const isAdmin = isConnected && wallet?.toLowerCase() === ADMIN_WALLET;
   const navItems = hasPrivateAccess ? privateNavItems : [];
-  const walletLabel = wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : "Connect";
+
+  const openConnectModal = async () => {
+    setConnectError("");
+    setShowConnectModal(true);
+    setConnectScanning(true);
+    try {
+      const found = await discoverBrowserWallets();
+      setConnectWallets(found);
+      if (!found.length) setConnectError("No EVM wallet detected. Install or unlock MetaMask, then try again.");
+    } finally {
+      setConnectScanning(false);
+    }
+  };
+
+  const rescanWallets = async () => {
+    setConnectError("");
+    setConnectScanning(true);
+    try {
+      const found = await discoverBrowserWallets();
+      setConnectWallets(found);
+      if (!found.length) setConnectError("Still no wallet found. Make sure your extension is unlocked.");
+    } finally {
+      setConnectScanning(false);
+    }
+  };
+
+  const connectFromNav = async (bw: BrowserWallet) => {
+    setConnectError("");
+    setConnectingId(bw.id);
+    try {
+      const address = await requestWalletAddress(bw);
+      const nonceRes = await apiClient.createAuthNonce(address);
+      if (nonceRes.error || !nonceRes.data) throw new Error(nonceRes.error ?? "Could not create auth challenge");
+      const sig = await requestWalletSignature(bw, address, nonceRes.data.message);
+      await connectWallet(address, nonceRes.data.message, sig);
+      setShowConnectModal(false);
+      // Let React re-render; passport check happens in the next tick via store
+      setTimeout(() => {
+        // If no passport after connecting, guide them to mint
+        if (!passport) router.push("/onboarding");
+      }, 300);
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : "Wallet connection failed");
+    } finally {
+      setConnectingId(null);
+    }
+  };
 
   const handleDisconnect = () => {
     disconnectWallet();
     setWalletMenuOpen(false);
   };
 
+  const walletLabel = wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : "Connect";
+
   return (
     <>
+      <RitualSurface />
       <header className="fixed inset-x-0 top-0 z-30 border-b border-cyan/12 bg-void/82 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <Link href="/" className="flex items-center gap-3 font-semibold text-ink">
@@ -57,6 +119,16 @@ export function AppShell({ children }: { children: ReactNode }) {
                 Rankings
               </Link>
             ) : null}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="quiet-button hidden items-center gap-1.5 px-3 py-2 text-sm font-semibold sm:inline-flex"
+                title="Admin console"
+              >
+                <ShieldCheck className="size-4 text-cyan" />
+                Admin
+              </Link>
+            )}
             {isConnected && wallet ? (
               <div className="relative">
                 <button
@@ -82,19 +154,18 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ) : null}
               </div>
             ) : (
-              <Link href="/onboarding" className="rune-button inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold hover-lift">
+              <button
+                type="button"
+                onClick={openConnectModal}
+                className="rune-button inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold hover-lift"
+              >
                 <Wallet className="size-4" />
                 Connect
-              </Link>
+              </button>
             )}
           </div>
         </div>
       </header>
-      <div className="pointer-events-none fixed inset-0 z-0 opacity-30" aria-hidden="true">
-        <div className="absolute left-[8%] top-28 font-mono text-6xl text-cyan/10 float-rune">RA</div>
-        <div className="absolute right-[12%] top-52 font-mono text-5xl text-purple/10 float-rune">SBT</div>
-        <div className="absolute bottom-24 left-[16%] font-mono text-4xl text-green/10 float-rune">XP</div>
-      </div>
       <div className="relative z-10 min-h-screen pt-[73px] pb-24 md:pb-0">{children}</div>
       {navItems.length ? (
         <nav
@@ -109,6 +180,84 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
       ) : null}
+
+      <Modal
+        isOpen={showConnectModal}
+        title="Connect Wallet"
+        onClose={() => { setShowConnectModal(false); setConnectError(""); }}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => { setShowConnectModal(false); setConnectError(""); }}
+              className="quiet-button flex-1 px-4 py-2 font-semibold text-muted hover:text-cyan"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={rescanWallets}
+              disabled={connectScanning}
+              className="rune-button inline-flex flex-1 items-center justify-center gap-2 px-4 py-2 font-semibold button-press disabled:opacity-50"
+            >
+              <RefreshCw className={`size-4 ${connectScanning ? "animate-spin" : ""}`} />
+              {connectScanning ? "Scanning..." : "Refresh"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="copy-muted text-sm">
+            Pick the wallet that will sign your session. This is not a transaction — no funds move.
+          </p>
+          {connectScanning ? (
+            <LoadingSpinner size="sm" message="Scanning browser wallets..." />
+          ) : connectWallets.length ? (
+            <div className="grid gap-2">
+              {connectWallets.map((bw) => (
+                <button
+                  key={bw.id}
+                  type="button"
+                  onClick={() => connectFromNav(bw)}
+                  disabled={connectingId !== null}
+                  className="wallet-option flex items-center justify-between gap-3 px-3 py-3 text-left disabled:opacity-50"
+                >
+                  <span className="flex items-center gap-3">
+                    {bw.icon ? (
+                      <img src={bw.icon} alt="" className="size-8 rounded-md" />
+                    ) : (
+                      <span className="status-pill grid size-8 place-items-center font-mono text-xs">EVM</span>
+                    )}
+                    <span>
+                      <span className="block font-medium">{bw.name}</span>
+                      <span className="block text-xs text-muted">
+                        {connectingId === bw.id ? "Connecting..." : "Injected wallet"}
+                      </span>
+                    </span>
+                  </span>
+                  {connectingId === bw.id
+                    ? <LoadingSpinner size="sm" />
+                    : <Wallet className="size-4 text-cyan" />}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="detail-cell flex gap-3 border-amber/30 bg-amber/10 p-3 text-sm text-muted">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber" />
+              No browser wallet detected. Install or unlock MetaMask, then click Refresh.
+            </div>
+          )}
+          {connectError && (
+            <div className="detail-cell flex gap-3 border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              {connectError}
+            </div>
+          )}
+          <p className="text-xs text-muted">
+            New here? <Link href="/onboarding" onClick={() => setShowConnectModal(false)} className="text-cyan hover:underline">Mint your Soulbound Passport</Link> after connecting.
+          </p>
+        </div>
+      </Modal>
     </>
   );
 }

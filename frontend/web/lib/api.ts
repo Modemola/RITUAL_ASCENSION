@@ -60,11 +60,11 @@ export interface ChainSyncData {
 export interface OracleResponse {
   conversationId: string;
   message: string;
-  recommendedQuest: { id: string; title: string; reason: string };
-  learningOutcome: string;
-  nextMilestone: string;
-  rateLimitRemaining: number;
   source?: string;
+  recommendedQuest?: { id: string; title: string; reason: string };
+  learningOutcome?: string;
+  nextMilestone?: string;
+  rateLimitRemaining?: number;
   sourceNotes?: string[];
   sources?: Array<{
     id: string;
@@ -395,8 +395,8 @@ export const apiClient = {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     }),
 
-  getReviewQueue: (token?: string, limit = 50) =>
-    apiFetch<ReviewQueueData>(`/api/admin/reviews?limit=${limit}`, {
+  getReviewQueue: (token?: string, limit = 50, status?: "pending" | "all") =>
+    apiFetch<ReviewQueueData>(`/api/admin/reviews?limit=${limit}${status ? `&status=${status}` : ""}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     }),
 
@@ -417,11 +417,11 @@ export const apiClient = {
   getEvolution: () => apiFetch(`/api/passport/evolution`),
 
   // Oracle chat
-  askOracle: (message: string, wallet: string, token?: string) =>
+  askOracle: (message: string, wallet: string, token?: string, conversationId?: string) =>
     apiFetch<OracleResponse>(`/api/oracle/chat`, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      body: JSON.stringify({ message, wallet }),
+      body: JSON.stringify({ message, wallet, conversationId }),
     }),
 
   // Ritual testnet-only wallet activity

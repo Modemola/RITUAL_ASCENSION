@@ -19,8 +19,8 @@ const difficultyColors = {
 
 export const QuestDetailClient = ({ questId }: { questId: string }) => {
   const { wallet, authToken, isConnected, identityLink, connectDiscord } = useRitual();
-  const [discordId, setDiscordId] = useState("ritual-demo-user");
-  const [discordUsername, setDiscordUsername] = useState("ritual_builder");
+  const [discordId, setDiscordId] = useState("");
+  const [discordUsername, setDiscordUsername] = useState("");
   const [verification, setVerification] = useState<VerificationData["verification"] | null>(null);
   const [attempt, setAttempt] = useState<QuestAttempt | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);

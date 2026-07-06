@@ -307,7 +307,10 @@ export async function handleApiRequest(
       return;
     }
 
-    const result = await services.adminReviews.listQueue(Number(url.searchParams.get("limit") ?? undefined));
+    const result = await services.adminReviews.listQueue(
+      Number(url.searchParams.get("limit") ?? undefined),
+      url.searchParams.get("status") ?? undefined
+    );
     json(response, 200, result.body);
     return;
   }
@@ -420,7 +423,7 @@ export async function handleApiRequest(
   }
 
   if (url.pathname === "/api/oracle/chat" && request.method === "POST") {
-    const body = await readBody(request) as { wallet?: string; message?: string };
+    const body = await readBody(request) as { wallet?: string; message?: string; conversationId?: string };
     const authorization = await authorizePassportWallet(request, services, body.wallet);
     if (!authorization.ok) {
       json(response, authorization.statusCode, authorization.body);
@@ -429,7 +432,8 @@ export async function handleApiRequest(
 
     const result = await services.oracle.chat({
       wallet: authorization.wallet,
-      message: body.message
+      message: body.message,
+      conversationId: body.conversationId
     });
     json(response, result.ok ? 200 : result.statusCode, result.body);
     return;

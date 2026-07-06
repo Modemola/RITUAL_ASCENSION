@@ -1,8 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import {
+  calculateReputation,
   getBuilderClass,
   getLevelProgress,
-  getQuest,
   quests
 } from "@ritual/domain";
 import type { PassportProfile, Quest } from "@ritual/domain";
@@ -10,246 +11,69 @@ import type { OracleConfig } from "../config.js";
 import type { IdentityService } from "./identity-service.js";
 import {
   OracleKnowledgeService,
-  type OracleKnowledgeBundle,
-  type OracleKnowledgeSource
+  type OracleKnowledgeBundle
 } from "./oracle-knowledge-service.js";
 import type { PassportService } from "./passport-service.js";
 import type { QuestEngineService } from "./quest-engine-service.js";
 
-interface OracleInput {
+// ---------------------------------------------------------------------------
+// Conversation store
+// ---------------------------------------------------------------------------
+
+interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface ConversationSession {
   wallet: string;
-  message?: string;
+  messages: ConversationMessage[];
+  lastActivity: number;
 }
 
-interface OracleProviderResponse {
-  conversationId?: string;
-  message: string;
-  recommendedQuest?: {
-    id: string;
-    title: string;
-    reason: string;
-  };
-  learningOutcome?: string;
-  nextMilestone?: string;
-  sourceNotes?: string[];
-}
+const SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour
+const MAX_HISTORY = 40;
 
-export class OracleService {
-  constructor(
-    private readonly passport: PassportService,
-    private readonly questsService: QuestEngineService,
-    private readonly identity: IdentityService,
-    private readonly knowledge: OracleKnowledgeService = new OracleKnowledgeService(),
-    private readonly config: OracleConfig = { provider: "local", model: "local-ritual-mentor" }
-  ) {}
+class ConversationStore {
+  private sessions = new Map<string, ConversationSession>();
 
-  async chat(input: OracleInput) {
-    const passport = await this.passport.getPassport(input.wallet);
-    if (!passport) {
-      return {
-        ok: false as const,
-        statusCode: 403,
-        body: {
-          error: "PassportRequired",
-          message: "Mint a Soulbound Passport before using the Oracle"
-        }
-      };
+  get(conversationId: string, wallet: string): ConversationSession | null {
+    const session = this.sessions.get(conversationId);
+    if (!session) return null;
+    if (session.wallet.toLowerCase() !== wallet.toLowerCase()) return null;
+    if (Date.now() - session.lastActivity > SESSION_TTL_MS) {
+      this.sessions.delete(conversationId);
+      return null;
     }
-
-    const attempts = await this.questsService.listAttempts(input.wallet);
-    const identityLink = await this.identity.getIdentityLink(input.wallet);
-    const context = buildOracleContext(passport, attempts.map((attempt) => attempt.questId));
-    const knowledgeBundle = await this.knowledge.buildContext({
-      identityLink,
-      message: input.message ?? "",
-      wallet: input.wallet
-    });
-    let providerResponse: OracleProviderResponse | null = null;
-    if (this.config.provider === "openai-compatible") {
-      providerResponse = await this.askOpenAiCompatibleProvider(input.message ?? "", context, knowledgeBundle).catch((err) => {
-        console.error(JSON.stringify({ level: "error", event: "oracle_provider_error", message: err instanceof Error ? err.message : String(err) }));
-        return null;
-      });
-      if (!providerResponse) {
-        return {
-          ok: false as const,
-          statusCode: 502,
-          body: {
-            error: "OracleProviderFailed",
-            message: "The Oracle provider did not return a valid response. Check ORACLE_ENDPOINT, ORACLE_API_KEY, and ORACLE_MODEL in your environment."
-          }
-        };
-      }
-    } else if (this.config.provider === "anthropic") {
-      providerResponse = await this.askAnthropicProvider(input.message ?? "", context, knowledgeBundle).catch((err) => {
-        console.error(JSON.stringify({ level: "error", event: "oracle_provider_error", message: err instanceof Error ? err.message : String(err) }));
-        return null;
-      });
-      if (!providerResponse) {
-        return {
-          ok: false as const,
-          statusCode: 502,
-          body: {
-            error: "OracleProviderFailed",
-            message: "The Oracle provider did not return a valid response. Check ORACLE_API_KEY and ORACLE_MODEL in your environment."
-          }
-        };
-      }
-    }
-    const response = providerResponse ?? buildLocalOracleResponse(input.message ?? "", context, knowledgeBundle);
-
-    return {
-      ok: true as const,
-      body: {
-        conversationId: response.conversationId ?? `oracle-${input.wallet}-${Date.now()}`,
-        message: response.message,
-        recommendedQuest: response.recommendedQuest ?? toRecommendedQuest(context.recommendedQuest),
-        learningOutcome: response.learningOutcome ?? getLearningOutcome(context.recommendedQuest),
-        nextMilestone: response.nextMilestone ?? getNextMilestone(passport),
-        sources: summarizeSources(knowledgeBundle.sources),
-        sourceNotes: response.sourceNotes ?? buildSourceNotes(knowledgeBundle),
-        rateLimitRemaining: this.config.provider === "local" ? 99 : 19,
-        source: providerResponse ? this.config.provider : "local"
-      }
-    };
+    return session;
   }
 
-  private async askOpenAiCompatibleProvider(
-    message: string,
-    context: OracleContext,
-    knowledgeBundle: OracleKnowledgeBundle
-  ): Promise<OracleProviderResponse | null> {
-    if (!this.config.endpoint || !this.config.apiKey) return null;
-
-    const response = await fetch(this.config.endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.config.apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content: [
-              "You are the Ritual Ascension Oracle Mentor.",
-              "Answer questions about Ritual only from the provided knowledge sources and passport context.",
-              "Use Ritual docs, chain, Discord, contributor, quest, and passport sources when present.",
-              "If live data is unavailable, say which source is unconfigured instead of inventing facts.",
-              "Recommend exactly one existing quest when a progression recommendation is useful.",
-              "Return JSON with message, recommendedQuest, learningOutcome, nextMilestone, and sourceNotes."
-            ].join(" ")
-          },
-          {
-            role: "user",
-            content: JSON.stringify({
-              userMessage: message,
-              passport: context.passportSummary,
-              queryIntent: knowledgeBundle.queryIntent,
-              knowledgeSources: knowledgeBundle.sources,
-              unavailableSources: knowledgeBundle.unavailable,
-              recommendedQuest: context.recommendedQuest,
-              availableQuests: context.availableQuests.slice(0, 8)
-            })
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      console.error(JSON.stringify({ level: "error", event: "oracle_provider_http_error", status: response.status, body }));
-      return null;
+  create(wallet: string): { conversationId: string; session: ConversationSession } {
+    for (const [id, s] of this.sessions) {
+      if (Date.now() - s.lastActivity > SESSION_TTL_MS) this.sessions.delete(id);
     }
-
-    const data = await response.json() as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) {
-      console.error(JSON.stringify({ level: "error", event: "oracle_provider_empty_content", data }));
-      return null;
-    }
-
-    try {
-      const parsed = JSON.parse(content) as Partial<OracleProviderResponse>;
-      if (typeof parsed.message !== "string") {
-        console.error(JSON.stringify({ level: "error", event: "oracle_provider_invalid_json", content }));
-        return null;
-      }
-      return parsed as OracleProviderResponse;
-    } catch {
-      console.error(JSON.stringify({ level: "error", event: "oracle_provider_json_parse_error", content }));
-      return null;
-    }
+    const conversationId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const session: ConversationSession = { wallet, messages: [], lastActivity: Date.now() };
+    this.sessions.set(conversationId, session);
+    return { conversationId, session };
   }
 
-  private async askAnthropicProvider(
-    message: string,
-    context: OracleContext,
-    knowledgeBundle: OracleKnowledgeBundle
-  ): Promise<OracleProviderResponse | null> {
-    if (!this.config.apiKey) return null;
-
-    const client = new Anthropic({ apiKey: this.config.apiKey });
-
-    const response = await client.messages.create({
-      model: this.config.model,
-      max_tokens: 2048,
-      system: [
-        "You are the Ritual Ascension Oracle Mentor.",
-        "Answer questions about Ritual only from the provided knowledge sources and passport context.",
-        "Use Ritual docs, chain, Discord, contributor, quest, and passport sources when present.",
-        "If live data is unavailable, say which source is unconfigured instead of inventing facts.",
-        "Recommend exactly one existing quest when a progression recommendation is useful.",
-        "Return ONLY valid JSON with fields: message (string), recommendedQuest ({id, title, reason}), learningOutcome (string), nextMilestone (string), sourceNotes (string[]).",
-        "Do not include markdown fences or any text outside the JSON object."
-      ].join(" "),
-      messages: [
-        {
-          role: "user",
-          content: JSON.stringify({
-            userMessage: message,
-            passport: context.passportSummary,
-            queryIntent: knowledgeBundle.queryIntent,
-            knowledgeSources: knowledgeBundle.sources,
-            unavailableSources: knowledgeBundle.unavailable,
-            recommendedQuest: context.recommendedQuest,
-            availableQuests: context.availableQuests.slice(0, 8)
-          })
-        }
-      ]
-    });
-
-    const textBlock = response.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      console.error(JSON.stringify({ level: "error", event: "oracle_provider_empty_content" }));
-      return null;
+  append(conversationId: string, ...messages: ConversationMessage[]) {
+    const session = this.sessions.get(conversationId);
+    if (!session) return;
+    session.messages.push(...messages);
+    if (session.messages.length > MAX_HISTORY) {
+      session.messages = session.messages.slice(-MAX_HISTORY);
     }
-
-    const raw = textBlock.text.trim();
-    const jsonStart = raw.indexOf("{");
-    const jsonEnd = raw.lastIndexOf("}");
-    if (jsonStart === -1 || jsonEnd === -1) {
-      console.error(JSON.stringify({ level: "error", event: "oracle_provider_no_json_object", raw }));
-      return null;
-    }
-
-    try {
-      const parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1)) as Partial<OracleProviderResponse>;
-      if (typeof parsed.message !== "string") {
-        console.error(JSON.stringify({ level: "error", event: "oracle_provider_invalid_json", raw }));
-        return null;
-      }
-      return parsed as OracleProviderResponse;
-    } catch {
-      console.error(JSON.stringify({ level: "error", event: "oracle_provider_json_parse_error", raw }));
-      return null;
-    }
+    session.lastActivity = Date.now();
   }
 }
+
+const store = new ConversationStore();
+
+// ---------------------------------------------------------------------------
+// Oracle context
+// ---------------------------------------------------------------------------
 
 interface OracleContext {
   availableQuests: Quest[];
@@ -266,17 +90,17 @@ interface OracleContext {
 }
 
 function buildOracleContext(
-  passport: ReturnType<PassportService["getPassport"]> extends Promise<infer T> ? NonNullable<T> : PassportProfile,
+  passport: PassportProfile,
   attemptedQuestIds: string[]
 ): OracleContext {
   const completedQuestIds = new Set(passport.completedQuestIds ?? []);
   const attempted = new Set(attemptedQuestIds);
-  const availableQuests = quests.filter((quest) => !completedQuestIds.has(quest.id));
-  const inProgressQuest = quests.find((quest) => attempted.has(quest.id) && !completedQuestIds.has(quest.id));
+  const availableQuests = quests.filter((q) => !completedQuestIds.has(q.id));
+  const inProgress = quests.find((q) => attempted.has(q.id) && !completedQuestIds.has(q.id));
   const recommendedQuest =
-    inProgressQuest ??
-    availableQuests.find((quest) => quest.id === "llm-precompile") ??
-    availableQuests.find((quest) => quest.classId === passport.classId) ??
+    inProgress ??
+    availableQuests.find((q) => q.id === "llm-precompile") ??
+    availableQuests.find((q) => q.classId === passport.classId) ??
     availableQuests[0] ??
     quests[0];
   const progress = getLevelProgress(passport.xp);
@@ -287,7 +111,7 @@ function buildOracleContext(
       className: getBuilderClass(passport.classId).name,
       completedQuestCount: passport.completedQuestIds?.length ?? 0,
       level: progress.level,
-      reputation: passport.reputation,
+      reputation: calculateReputation(passport),
       stage: passport.stage,
       wallet: passport.wallet,
       xp: passport.xp
@@ -296,99 +120,296 @@ function buildOracleContext(
   };
 }
 
-function buildLocalOracleResponse(
-  userMessage: string,
-  context: OracleContext,
-  knowledgeBundle: OracleKnowledgeBundle
-): OracleProviderResponse {
-  const quest = context.recommendedQuest;
-  const className = context.passportSummary.className;
-  const promptSignal = userMessage.trim()
-    ? `I heard the shape of your question: "${userMessage.trim().slice(0, 140)}".`
-    : "You did not ask for a specific direction, so I am optimizing for the next progression unlock.";
-  const sourceSignal = describeKnowledgeSignal(knowledgeBundle);
+// ---------------------------------------------------------------------------
+// System prompt — warm mentor, not a machine printing a report
+// ---------------------------------------------------------------------------
 
-  return {
-    conversationId: "local-oracle",
-    message: `${promptSignal} ${sourceSignal} As a ${className}, your highest-leverage next move is ${quest.title}. It is worth ${quest.xp} XP and fits your current Stage ${context.passportSummary.stage} passport progression.`,
-    recommendedQuest: toRecommendedQuest(quest),
-    learningOutcome: getLearningOutcome(quest),
-    nextMilestone: getNextMilestoneFromQuest(quest),
-    sourceNotes: buildSourceNotes(knowledgeBundle)
-  };
+const STAGE_NAMES: Record<number, string> = {
+  1: "Genesis",
+  2: "Initiate",
+  3: "Builder",
+  4: "Architect",
+  5: "Ascendant"
+};
+
+function buildSystemPrompt(context: OracleContext, _knowledge: OracleKnowledgeBundle): string {
+  const p = context.passportSummary;
+  const rq = context.recommendedQuest;
+  const otherQuests = context.availableQuests
+    .filter((q) => q.id !== rq?.id)
+    .slice(0, 4)
+    .map((q) => q.title)
+    .join(", ");
+
+  const progressLine =
+    p.completedQuestCount === 0
+      ? "No quests completed yet — just getting started."
+      : p.completedQuestCount === 1
+        ? "1 quest completed, momentum is building."
+        : `${p.completedQuestCount} quests completed.`;
+
+  const stageName = STAGE_NAMES[p.stage] ?? `Stage ${p.stage}`;
+
+  const lines = [
+    "You are the Oracle — the guiding intelligence of Ritual Ascension, an on-chain reputation platform for builders on the Ritual network.",
+    "",
+    "Your character: warm, perceptive, direct. You care about this builder's growth. You speak with wisdom but no pretension. You never pad responses — say what matters and stop.",
+    "",
+    "This builder's profile:",
+    `  Wallet: ${p.wallet.slice(0, 6)}...${p.wallet.slice(-4)}`,
+    `  Class: ${p.className}`,
+    `  Level ${p.level} | ${stageName} (Stage ${p.stage}) | ${p.xp.toLocaleString()} XP | Reputation ${p.reputation}/100`,
+    `  ${progressLine}`,
+    rq ? `  Best next quest: "${rq.title}" — ${rq.xp} XP, ${rq.difficulty} difficulty` : "",
+    otherQuests ? `  Other quests available: ${otherQuests}` : "",
+    "",
+    "How to respond:",
+    "- Answer what they actually asked. Don't pivot to quest recommendations unless they're asking for direction.",
+    "- Keep it to 2–4 sentences unless they ask for more.",
+    "- If recommending a quest, name it and say why it fits this specific builder — not a generic pitch.",
+    "- If they sound frustrated or stuck, acknowledge it before helping.",
+    "- Never say 'As an AI' or anything that breaks character.",
+    "- No bullet lists, JSON, or code blocks unless they explicitly ask."
+  ];
+
+  return lines.filter((l) => l !== undefined).join("\n");
 }
 
-function describeKnowledgeSignal(knowledgeBundle: OracleKnowledgeBundle) {
-  if (knowledgeBundle.queryIntent === "discord" || knowledgeBundle.queryIntent === "contributor") {
-    const discordSource = knowledgeBundle.sources.find((source) => source.kind === "discord");
-    return discordSource?.freshness === "live"
-      ? "I checked the configured Ritual Discord intelligence source."
-      : "Live Discord intelligence is not configured yet, so I can only use demo/community schema context.";
+// ---------------------------------------------------------------------------
+// Local fallback — used when no AI provider is configured or all fail
+// ---------------------------------------------------------------------------
+
+function buildLocalFallback(userMessage: string, context: OracleContext): string {
+  const p = context.passportSummary;
+  const rq = context.recommendedQuest;
+  const stageName = STAGE_NAMES[p.stage] ?? `Stage ${p.stage}`;
+
+  if (!userMessage.trim()) {
+    return `Welcome, ${p.className}. You're at Level ${p.level}, ${stageName}. Your clearest next move is "${rq.title}" — ${rq.xp} XP that will push you forward.`;
   }
 
-  if (knowledgeBundle.queryIntent === "chain") {
-    const chainSource = knowledgeBundle.sources.find((source) => source.kind === "indexer" && source.freshness === "live");
-    return chainSource
-      ? "I checked the configured Ritual chain intelligence source."
-      : "Live chain/indexer intelligence is not configured yet, so I can only use local chain configuration and demo activity context.";
+  const lower = userMessage.toLowerCase();
+  if (/how|what|explain|tell me/i.test(lower)) {
+    return `Good question. Right now the Oracle's live connection isn't configured, so I can't give you a full answer — but I can say this: as a ${p.className} at ${stageName}, "${rq.title}" is where I'd put your energy next. It's ${rq.xp} XP and ${rq.difficulty} difficulty.`;
+  }
+  if (/stuck|help|confused|lost|don't know|dont know/i.test(lower)) {
+    return `Everyone hits that wall. Here's what I'd do: step back, pick one thing. For you right now, that one thing is "${rq.title}". Start there — the path becomes clearer once you're moving.`;
+  }
+  if (/thanks|thank you|appreciate/i.test(lower)) {
+    return `The work you're doing matters. Keep going — ${stageName} is just the beginning.`;
   }
 
-  if (knowledgeBundle.queryIntent === "ritual_docs") {
-    const docsSource = knowledgeBundle.sources.find((source) => source.id === "ritual-docs-live");
-    return docsSource
-      ? "I checked the configured Ritual docs source."
-      : "Live docs search is not configured yet, so I can only use the local Ritual Ascension facts bundled with the app.";
+  return `I hear you. The Oracle's live intelligence isn't connected right now, but your profile is clear: ${p.className}, Level ${p.level}, ${stageName}. Next move: "${rq.title}" — ${rq.xp} XP. Complete it and something shifts.`;
+}
+
+// ---------------------------------------------------------------------------
+// OracleService
+// ---------------------------------------------------------------------------
+
+export class OracleService {
+  constructor(
+    private readonly passport: PassportService,
+    private readonly questsService: QuestEngineService,
+    private readonly identity: IdentityService,
+    private readonly knowledge: OracleKnowledgeService = new OracleKnowledgeService(),
+    private readonly config: OracleConfig = { provider: "local", model: "gemini-2.0-flash" }
+  ) {}
+
+  async chat(input: { wallet: string; message?: string; conversationId?: string }) {
+    const passport = await this.passport.getPassport(input.wallet);
+    if (!passport) {
+      return {
+        ok: false as const,
+        statusCode: 403,
+        body: {
+          error: "PassportRequired",
+          message: "Mint a Soulbound Passport before using the Oracle."
+        }
+      };
+    }
+
+    const userMessage = (input.message ?? "").trim();
+    if (!userMessage) {
+      return {
+        ok: false as const,
+        statusCode: 400,
+        body: { error: "EmptyMessage", message: "Say something to the Oracle." }
+      };
+    }
+
+    // Resolve or create conversation session
+    let conversationId = input.conversationId;
+    let session = conversationId ? store.get(conversationId, input.wallet) : null;
+    if (!session) {
+      const created = store.create(input.wallet);
+      conversationId = created.conversationId;
+      session = created.session;
+    }
+
+    const [attempts, identityLink] = await Promise.all([
+      this.questsService.listAttempts(input.wallet),
+      this.identity.getIdentityLink(input.wallet)
+    ]);
+
+    const context = buildOracleContext(passport, attempts.map((a) => a.questId));
+    const knowledgeBundle = await this.knowledge.buildContext({
+      identityLink,
+      message: userMessage,
+      wallet: input.wallet
+    });
+
+    const systemPrompt = buildSystemPrompt(context, knowledgeBundle);
+    const pastMessages = session.messages.slice();
+
+    let responseText: string | null = null;
+    let source = "local";
+
+    const { provider } = this.config;
+
+    if ((provider === "gemini" || provider === "gemini-openai") && this.config.geminiApiKey) {
+      responseText = await this.askGemini(userMessage, pastMessages, systemPrompt).catch((err) => {
+        console.error(JSON.stringify({ level: "error", event: "oracle_gemini_error", message: err instanceof Error ? err.message : String(err) }));
+        return null;
+      });
+      if (responseText) source = "gemini";
+    }
+
+    if (!responseText && (provider === "openai" || provider === "gemini-openai") && this.config.openaiApiKey) {
+      responseText = await this.askOpenAI(userMessage, pastMessages, systemPrompt).catch((err) => {
+        console.error(JSON.stringify({ level: "error", event: "oracle_openai_error", message: err instanceof Error ? err.message : String(err) }));
+        return null;
+      });
+      if (responseText) source = "openai";
+    }
+
+    // Legacy providers kept for backward compatibility
+    if (!responseText && provider === "anthropic" && this.config.apiKey) {
+      responseText = await this.askAnthropicCompat(userMessage, pastMessages, systemPrompt).catch(() => null);
+      if (responseText) source = "anthropic";
+    }
+
+    if (!responseText && provider === "openai-compatible" && this.config.apiKey && this.config.endpoint) {
+      responseText = await this.askOpenAiCompatible(userMessage, pastMessages, systemPrompt).catch(() => null);
+      if (responseText) source = "openai-compatible";
+    }
+
+    if (!responseText) {
+      responseText = buildLocalFallback(userMessage, context);
+      source = "local";
+    }
+
+    store.append(conversationId!, { role: "user", content: userMessage }, { role: "assistant", content: responseText });
+
+    return {
+      ok: true as const,
+      body: {
+        conversationId,
+        message: responseText,
+        source
+      }
+    };
   }
 
-  return "I gathered the available Ritual context for your wallet, quests, chain configuration, and community sources.";
-}
+  private async askGemini(
+    userMessage: string,
+    history: ConversationMessage[],
+    systemPrompt: string
+  ): Promise<string> {
+    const genAI = new GoogleGenerativeAI(this.config.geminiApiKey!);
+    const model = genAI.getGenerativeModel({
+      model: this.config.geminiModel ?? "gemini-2.0-flash",
+      systemInstruction: systemPrompt
+    });
 
-function summarizeSources(sources: OracleKnowledgeSource[]) {
-  return sources.map((source) => ({
-    id: source.id,
-    label: source.label,
-    kind: source.kind,
-    freshness: source.freshness,
-    summary: source.summary
-  }));
-}
+    const geminiHistory = history.map((msg) => ({
+      role: msg.role === "user" ? ("user" as const) : ("model" as const),
+      parts: [{ text: msg.content }]
+    }));
 
-function buildSourceNotes(knowledgeBundle: OracleKnowledgeBundle) {
-  const notes = knowledgeBundle.sources.map((source) =>
-    `${source.label}: ${source.freshness} source`
-  );
-  return [...notes, ...knowledgeBundle.unavailable];
-}
-
-function toRecommendedQuest(quest: Quest) {
-  return {
-    id: quest.id,
-    title: quest.title,
-    reason: `${quest.verification} proof, ${quest.xp} XP, ${quest.difficulty} difficulty`
-  };
-}
-
-function getLearningOutcome(quest: Quest) {
-  if (quest.verification === "TX_HASH") return "You will practice proving real Ritual testnet execution from wallet activity.";
-  if (quest.verification === "TESTNET_ACTIVITY") return "You will turn Ritual testnet usage into passport progress.";
-  if (quest.verification === "DISCORD_ACTIVITY" || quest.verification === "DISCORD_ROLE") {
-    return "You will connect community identity to the same soulbound passport.";
+    const chat = model.startChat({ history: geminiHistory });
+    const result = await chat.sendMessage(userMessage);
+    const text = result.response.text().trim();
+    if (!text) throw new Error("Gemini returned empty response");
+    return text;
   }
-  return "You will package a builder artifact for review and durable reputation.";
-}
 
-function getNextMilestone(passport: PassportProfile | ReturnType<typeof buildOracleContext>["passportSummary"]) {
-  const stage = "stage" in passport ? passport.stage : 1;
-  if (stage <= 1) return "Complete your first deployment to reach Stage 2.";
-  if (stage === 2) return "Complete the LLM precompile quest to reach Stage 3.";
-  if (stage === 3) return "Ship a full project to reach Stage 4.";
-  return "Build reputation toward Ascendant status.";
-}
+  private async askOpenAI(
+    userMessage: string,
+    history: ConversationMessage[],
+    systemPrompt: string
+  ): Promise<string> {
+    const client = new OpenAI({ apiKey: this.config.openaiApiKey });
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: "system", content: systemPrompt },
+      ...history.map((msg) => ({
+        role: msg.role as "user" | "assistant",
+        content: msg.content
+      })),
+      { role: "user", content: userMessage }
+    ];
 
-function getNextMilestoneFromQuest(quest: Quest) {
-  const resolved = getQuest(quest.id);
-  if (resolved?.id === "deploy-contract") return "Confirm the deployment proof and push the passport into Stage 2.";
-  if (resolved?.id === "llm-precompile") return "Confirm the LLM precompile call and push the passport into Stage 3.";
-  if (resolved?.type === "FULL_PROJECT") return "Submit a complete project artifact for review and Stage 4 progress.";
-  return "Complete the proof loop and bank the XP without changing wallets.";
+    const completion = await client.chat.completions.create({
+      model: this.config.openaiModel ?? "gpt-4o-mini",
+      messages,
+      max_tokens: 512
+    });
+
+    const text = completion.choices[0]?.message?.content?.trim();
+    if (!text) throw new Error("OpenAI returned empty response");
+    return text;
+  }
+
+  private async askAnthropicCompat(
+    userMessage: string,
+    history: ConversationMessage[],
+    systemPrompt: string
+  ): Promise<string> {
+    // Dynamic import so the package is optional at runtime if not installed
+    const { default: Anthropic } = await import("@anthropic-ai/sdk");
+    const client = new Anthropic({ apiKey: this.config.apiKey });
+    const response = await client.messages.create({
+      model: this.config.model ?? "claude-opus-4-8",
+      max_tokens: 512,
+      system: systemPrompt,
+      messages: [
+        ...history.map((msg) => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content
+        })),
+        { role: "user", content: userMessage }
+      ]
+    });
+    const block = response.content.find((b) => b.type === "text");
+    const text = block && block.type === "text" ? block.text.trim() : "";
+    if (!text) throw new Error("Anthropic returned empty response");
+    return text;
+  }
+
+  private async askOpenAiCompatible(
+    userMessage: string,
+    history: ConversationMessage[],
+    systemPrompt: string
+  ): Promise<string> {
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...history.map((msg) => ({ role: msg.role, content: msg.content })),
+      { role: "user", content: userMessage }
+    ];
+
+    const response = await fetch(this.config.endpoint!, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.config.apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ model: this.config.model, messages })
+    });
+
+    if (!response.ok) throw new Error(`OpenAI-compatible provider returned HTTP ${response.status}`);
+
+    const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+    const text = data.choices?.[0]?.message?.content?.trim();
+    if (!text) throw new Error("OpenAI-compatible provider returned empty content");
+    return text;
+  }
 }

@@ -32,6 +32,7 @@ export interface ReviewRecordRepository {
   findById(id: string): Promise<ReviewRecord | undefined>;
   findByAttemptId(questAttemptId: string): Promise<ReviewRecord | undefined>;
   listPending(limit: number): Promise<ReviewRecord[]>;
+  listAll(limit: number): Promise<ReviewRecord[]>;
   decide(input: DecideReviewRecordInput): Promise<ReviewRecord>;
 }
 
@@ -69,6 +70,12 @@ export class InMemoryReviewRecordRepository implements ReviewRecordRepository {
     return Array.from(this.recordsById.values())
       .filter((record) => record.status === "pending")
       .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
+      .slice(0, limit);
+  }
+
+  async listAll(limit: number) {
+    return Array.from(this.recordsById.values())
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
       .slice(0, limit);
   }
 
@@ -145,6 +152,21 @@ export class PostgresReviewRecordRepository implements ReviewRecordRepository {
         FROM review_records
         WHERE status = 'pending'
         ORDER BY created_at ASC
+        LIMIT $1
+      `,
+      [limit]
+    );
+
+    return result.rows.map(toReviewRecord);
+  }
+
+  async listAll(limit: number) {
+    const result = await this.pool.query<ReviewRecordRow>(
+      `
+        SELECT id, wallet, quest_attempt_id, product_id, reviewer_wallet,
+          status, notes, created_at, decided_at
+        FROM review_records
+        ORDER BY created_at DESC
         LIMIT $1
       `,
       [limit]

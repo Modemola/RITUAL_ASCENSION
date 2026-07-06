@@ -21,7 +21,6 @@ export default function LandingPage() {
   return (
     <main>
       <section className="relative overflow-hidden border-b border-cyan/15">
-        <div aria-hidden="true" className="art-bg art-bg--passport art-bg--hero" />
         <div className="identity-flow pointer-events-none absolute inset-x-0 top-8 mx-auto hidden h-40 max-w-5xl md:block" aria-hidden="true">
           <span className="flow-node left-[6%] top-10">WALLET</span>
           <span className="flow-node left-[42%] top-2">SBT</span>
@@ -30,25 +29,25 @@ export default function LandingPage() {
           <span className="flow-packet packet-b" />
         </div>
         <div className="relative z-10 mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_0.92fr] lg:items-center">
-          <div className="space-y-7 fade-in">
+          <div className="space-y-8 fade-in">
             <div className="eyebrow shine-line fade-in-delay-1">
-              <Sparkles className="size-4" />
-              ASCENSION RITUAL ONLINE
+              <Sparkles className="size-3.5" />
+              Ascension Ritual Online
             </div>
-            <div className="space-y-5 slide-up-delay">
-              <h1 className="display-title text-aurora max-w-4xl text-5xl sm:text-6xl lg:text-7xl">
-                Mint Your Soulbound Identity.
+            <div className="space-y-6 slide-up-delay">
+              <h1 className="display-title text-aurora max-w-3xl text-[clamp(3rem,8vw,6rem)]">
+                Mint Your<br />Soulbound<br />Identity.
               </h1>
-              <p className="max-w-2xl text-lg leading-8 text-muted">
-                Ritual Ascension turns one connected wallet and one linked Discord into a living builder passport: class, quests, XP, achievements, evolution, Oracle mentorship, and builder-only reputation.
+              <p className="max-w-xl text-[1.05rem] leading-[1.78] text-muted">
+                One wallet. One Discord. One living builder passport — tracking your class, quests, XP, evolution, and on-chain reputation across the Ritual ecosystem.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row fade-in-delay-3">
-              <Link href="/onboarding" className="rune-button inline-flex items-center justify-center gap-2 px-5 py-3 font-semibold hover-lift">
+              <Link href="/onboarding" className="rune-button inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-semibold tracking-wide hover-lift">
                 <Wallet className="size-4" />
                 Mint Your Passport
               </Link>
-              <Link href="/dashboard" className="quiet-button inline-flex items-center justify-center gap-2 px-5 py-3 font-semibold hover-lift">
+              <Link href="/dashboard" className="quiet-button inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-semibold tracking-wide hover-lift">
                 Enter Demo Temple <ArrowRight className="size-4" />
               </Link>
             </div>
@@ -106,9 +105,9 @@ export default function LandingPage() {
       <section className="border-b border-cyan/15 py-14">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.8fr_1.2fr]">
           <div>
-            <p className="text-cipher text-xs uppercase tracking-[0.22em]">Builder classes</p>
-            <h2 className="section-title energy-thread mt-3 inline-block text-3xl font-semibold">Choose your permanent path.</h2>
-            <p className="mt-3 leading-7 text-muted">Class selection defines your quest lane, class achievement, and passport metadata at mint time.</p>
+            <p className="text-cipher">Builder classes</p>
+            <h2 className="section-title energy-thread mt-4 inline-block text-3xl sm:text-4xl">Choose your permanent path.</h2>
+            <p className="copy-muted mt-4">Class selection defines your quest lane, class achievement, and passport metadata at mint time.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {builderClasses.map((builderClass) => (
@@ -159,9 +158,9 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <p className="text-cipher text-xs uppercase tracking-[0.22em]">Verified Ritual products</p>
-              <h2 className="section-title mt-3 text-3xl font-semibold">Approved products for using Ritual.</h2>
-              <p className="mt-3 max-w-2xl leading-7 text-muted">
+              <p className="text-cipher">Verified Ritual products</p>
+              <h2 className="section-title mt-4 text-3xl sm:text-4xl">Approved products for using Ritual.</h2>
+              <p className="copy-muted mt-4 max-w-2xl">
                 When a submitted Ritual product is reviewed and approved by the backend, it appears here so users can discover tools, apps, and protocols that help them interact with the Ritual blockchain.
               </p>
             </div>

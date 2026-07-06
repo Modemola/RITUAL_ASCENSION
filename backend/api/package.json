@@ -12,9 +12,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
+    "@google/generative-ai": "^0.24.1",
     "@ritual/domain": "file:../../shared/domain",
     "@types/pg": "^8.20.0",
     "ethers": "^6.16.0",
+    "openai": "^6.45.0",
     "pg": "^8.21.0",
     "tsx": "^4.19.2"
   },

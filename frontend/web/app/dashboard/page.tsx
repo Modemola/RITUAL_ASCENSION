@@ -1,17 +1,32 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Activity, BadgeCheck, Bot, ChevronRight, Flame, Hexagon, MessageCircle, Shield, Sparkles, Wallet } from "lucide-react";
 import { appClass, appProgress, appReputation, appTier, demoIdentityLink, demoPassport, evolutionStages, quests } from "@/lib/data";
+import { apiClient, ActivityFeedItem } from "@/lib/api";
 import { useRitual } from "@/lib/store";
 import { Skeleton, SkeletonText } from "@/lib/components";
 import { PrivateGate } from "@/lib/private-gate";
 
 export default function DashboardPage() {
-  const { wallet, isConnected, passport, isLoading, identityLink } = useRitual();
+  const { wallet, authToken, isConnected, passport, isLoading, identityLink } = useRitual();
   const activeQuest = quests.find((quest) => quest.status === "in_progress") ?? quests[0];
+  const [activity, setActivity] = useState<ActivityFeedItem[]>([]);
 
-  // In production, passport would come from API
+  useEffect(() => {
+    if (!wallet || !isConnected) return;
+    apiClient.getActivity(wallet, authToken ?? undefined, 8).then(res => {
+      if (res.data) setActivity(res.data.activity);
+    });
+  }, [wallet, isConnected, authToken]);
+
+  const today = new Date().toDateString();
+  const xpToday = activity
+    .filter(item => item.type === "xp_awarded" && new Date(item.createdAt).toDateString() === today)
+    .reduce((sum, item) => sum + (Number(item.metadata?.amount) || 0), 0);
+  const xpTodayDisplay = activity.length === 0 ? "—" : xpToday > 0 ? `+${xpToday}` : "0";
+
   const displayPassport = passport || demoPassport;
   const displayClass = appClass;
   const displayProgress = appProgress;
@@ -24,7 +39,6 @@ export default function DashboardPage() {
   return (
     <PrivateGate>
     <main className="art-surface mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div aria-hidden="true" className="art-bg art-bg--passport art-bg--dashboard-page" />
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end fade-in">
         <div>
           <p className="text-cipher text-xs uppercase tracking-[0.22em]">Builder dashboard</p>
@@ -85,8 +99,8 @@ export default function DashboardPage() {
         <section className="grid gap-5">
           <div className="grid gap-3 sm:grid-cols-3">
             {[
-              ["XP Today", "+850", Flame],
-              ["Streak", "7d", Activity],
+              ["XP Today", xpTodayDisplay, Flame],
+              ["Active weeks", `${displayPassport.activeWeeks}w`, Activity],
               ["Stage", `0${displayPassport.stage}`, Hexagon],
             ].map(([label, value, Icon], i) => (
               <div
@@ -179,16 +193,23 @@ export default function DashboardPage() {
               <h2 className="section-title text-xl font-semibold">Recent activity</h2>
             </div>
             <div className="mt-4 grid gap-3 font-mono text-sm">
-              {["+500 XP - Deploy Contract verified", "ACH_001 - First Blood unlocked", "Stage 2 - Initiate ignition complete"].map(
-                (item, i) => (
+              {activity.length === 0 ? (
+                <p className="text-muted py-2">No activity yet. Complete a quest to get started.</p>
+              ) : (
+                activity.slice(0, 5).map((item, i) => (
                   <div
-                    key={item}
+                    key={item.id}
                     className="detail-cell p-3 text-muted float-message"
                     style={{ animationDelay: `${i * 100}ms` }}
                   >
-                    {item}
+                    <span className={item.type === "xp_awarded" ? "text-cyan" : item.type === "achievement_unlocked" ? "text-gold" : "text-purple"}>
+                      {item.title}
+                    </span>
+                    {item.description && item.description !== item.title && (
+                      <span className="ml-2 text-white/50">{item.description}</span>
+                    )}
                   </div>
-                )
+                ))
               )}
             </div>
           </div>

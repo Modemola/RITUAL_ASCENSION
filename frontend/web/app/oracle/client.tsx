@@ -17,13 +17,14 @@ interface Message {
 export const OracleClient = () => {
   const { wallet, authToken, isConnected } = useRitual();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const { execute: sendMessage, status } = useAsync(async (content: string) => {
     if (!wallet) throw new Error("Wallet not connected");
 
-    const response = await apiClient.askOracle(content, wallet, authToken ?? undefined);
+    const response = await apiClient.askOracle(content, wallet, authToken ?? undefined, conversationId ?? undefined);
     if (response.error) throw new Error(response.error);
 
     return response.data;
@@ -44,15 +45,18 @@ export const OracleClient = () => {
 
       try {
         const result = await sendMessage(values.message);
+        if (result?.conversationId && !conversationId) {
+          setConversationId(result.conversationId);
+        }
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: result?.message || "Oracle has spoken...",
+          content: result?.message || "The Oracle is silent...",
           timestamp: Date.now(),
         };
         setMessages((prev) => [...prev, assistantMessage]);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to get oracle response");
+        setError(err instanceof Error ? err.message : "Failed to reach the Oracle");
         setMessages((prev) => prev.slice(0, -1));
       }
     }
@@ -64,7 +68,6 @@ export const OracleClient = () => {
 
   return (
     <main className="art-surface art-surface--visible relative mx-auto flex min-h-[calc(100vh-73px)] max-w-4xl flex-col px-4 py-8 sm:px-6">
-      <div aria-hidden="true" className="art-bg art-bg--oracle art-bg--page" />
       <header className="relative z-10 mb-8 fade-in">
         <p className="text-cipher text-xs uppercase tracking-[0.22em]">Divine Council</p>
         <h1 className="display-title text-aurora mt-2 text-4xl slide-up">The Oracle Speaks</h1>

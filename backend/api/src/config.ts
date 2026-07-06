@@ -21,9 +21,13 @@ export interface ChainConfig {
 export interface OracleConfig {
   apiKey?: string;
   endpoint?: string;
+  geminiApiKey?: string;
+  geminiModel?: string;
   knowledge?: OracleKnowledgeConfig;
   model: string;
-  provider: "local" | "openai-compatible" | "anthropic";
+  openaiApiKey?: string;
+  openaiModel?: string;
+  provider: "local" | "openai-compatible" | "anthropic" | "gemini" | "openai" | "gemini-openai";
 }
 
 export interface OracleKnowledgeConfig {
@@ -69,6 +73,8 @@ export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     oracle: {
       apiKey: env.ORACLE_API_KEY,
       endpoint: env.ORACLE_ENDPOINT,
+      geminiApiKey: env.GEMINI_API_KEY,
+      geminiModel: env.GEMINI_MODEL ?? "gemini-2.0-flash",
       knowledge: {
         discord: {
           apiKey: env.ORACLE_DISCORD_API_KEY ?? env.DISCORD_ACTIVITY_API_KEY,
@@ -83,12 +89,10 @@ export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
           endpoint: env.ORACLE_INDEXER_ENDPOINT
         }
       },
-      model: env.ORACLE_MODEL ?? (env.ORACLE_PROVIDER === "anthropic" ? "claude-opus-4-8" : "gpt-4.1-mini"),
-      provider: env.ORACLE_PROVIDER === "openai-compatible"
-        ? "openai-compatible"
-        : env.ORACLE_PROVIDER === "anthropic"
-          ? "anthropic"
-          : "local"
+      model: env.ORACLE_MODEL ?? "gemini-2.0-flash",
+      openaiApiKey: env.OPENAI_API_KEY,
+      openaiModel: env.OPENAI_MODEL ?? "gpt-4o-mini",
+      provider: parseOracleProvider(env.ORACLE_PROVIDER)
     },
     port: Number(env.PORT ?? 4000),
     verification: {
@@ -106,6 +110,15 @@ export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
 
 function parseAdminWallets(value?: string) {
   return parseList(value).map((wallet) => wallet.toLowerCase());
+}
+
+function parseOracleProvider(value?: string): OracleConfig["provider"] {
+  if (value === "gemini") return "gemini";
+  if (value === "openai") return "openai";
+  if (value === "gemini-openai") return "gemini-openai";
+  if (value === "openai-compatible") return "openai-compatible";
+  if (value === "anthropic") return "anthropic";
+  return "local";
 }
 
 export function validateApiConfig(config: ApiConfig) {
@@ -136,6 +149,14 @@ export function validateApiConfig(config: ApiConfig) {
 
   if (config.oracle.provider === "anthropic" && !config.oracle.apiKey) {
     issues.push("ORACLE_API_KEY must be set when ORACLE_PROVIDER=anthropic");
+  }
+
+  if ((config.oracle.provider === "gemini" || config.oracle.provider === "gemini-openai") && !config.oracle.geminiApiKey) {
+    issues.push("GEMINI_API_KEY must be set when ORACLE_PROVIDER=gemini or gemini-openai");
+  }
+
+  if (config.oracle.provider === "openai" && !config.oracle.openaiApiKey) {
+    issues.push("OPENAI_API_KEY must be set when ORACLE_PROVIDER=openai");
   }
 
   if (issues.length) {

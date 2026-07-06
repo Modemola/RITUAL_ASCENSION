@@ -40,10 +40,12 @@ export class AdminReviewService {
     });
   }
 
-  async listQueue(limit?: number) {
-    const records = await this.reviews.listPending(clampLimit(limit));
-    const queue: ReviewQueueItem[] = [];
+  async listQueue(limit?: number, status?: string) {
+    const records = status === "all"
+      ? await this.reviews.listAll(clampLimit(limit))
+      : await this.reviews.listPending(clampLimit(limit));
 
+    const queue: ReviewQueueItem[] = [];
     for (const record of records) {
       const attempt = await this.attempts.findById(record.questAttemptId);
       if (!attempt) continue;

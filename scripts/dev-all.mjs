@@ -31,8 +31,13 @@ const children = processes.map(({ name, command, args }) => {
 
   child.on("exit", (code) => {
     if (isShuttingDown) return;
-    console.error(`[${name}] exited with code ${code ?? "unknown"}`);
-    shutdown(code ?? 1);
+    console.error(`\n[${name}] process exited with code ${code ?? "unknown"}.`);
+    if (name === "api" && code !== 0) {
+      console.error(`[dev] Backend crashed. To debug run: npm run dev:backend`);
+      console.error(`[dev] Frontend (http://localhost:3000) may still be running — shutting down in 2s...\n`);
+    }
+    // Give processes a moment to flush output before killing
+    setTimeout(() => shutdown(code ?? 1), 2000);
   });
 
   return child;
