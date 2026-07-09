@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AlertTriangle, Award, Bot, ChevronDown, CircleGauge, LayoutDashboard, ListChecks, RefreshCw, ShieldCheck, Trophy, Wallet } from "lucide-react";
 import { ReactNode, useState } from "react";
 import { appProgress, demoPassport } from "@/lib/data";
 import { useRitual } from "@/lib/store";
 import { apiClient } from "@/lib/api";
+import { getErrorMessage } from "@/lib/errors";
 import { discoverBrowserWallets, requestWalletAddress, requestWalletSignature, BrowserWallet } from "@/lib/wallets";
 import { LoadingSpinner, Modal } from "@/lib/components";
 import { RitualSurface } from "@/components/ui/ritual-surface";
@@ -23,7 +23,6 @@ const privateNavItems = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { wallet, isConnected, passport, connectWallet, disconnectWallet } = useRitual();
-  const router = useRouter();
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [connectWallets, setConnectWallets] = useState<BrowserWallet[]>([]);
@@ -42,6 +41,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       const found = await discoverBrowserWallets();
       setConnectWallets(found);
       if (!found.length) setConnectError("No EVM wallet detected. Install or unlock MetaMask, then try again.");
+    } catch (err) {
+      setConnectError(getErrorMessage(err, "Failed to scan browser wallets"));
     } finally {
       setConnectScanning(false);
     }
@@ -54,6 +55,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       const found = await discoverBrowserWallets();
       setConnectWallets(found);
       if (!found.length) setConnectError("Still no wallet found. Make sure your extension is unlocked.");
+    } catch (err) {
+      setConnectError(getErrorMessage(err, "Failed to scan browser wallets"));
     } finally {
       setConnectScanning(false);
     }
@@ -69,13 +72,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       const sig = await requestWalletSignature(bw, address, nonceRes.data.message);
       await connectWallet(address, nonceRes.data.message, sig);
       setShowConnectModal(false);
-      // Let React re-render; passport check happens in the next tick via store
-      setTimeout(() => {
-        // If no passport after connecting, guide them to mint
-        if (!passport) router.push("/onboarding");
-      }, 300);
     } catch (err) {
-      setConnectError(err instanceof Error ? err.message : "Wallet connection failed");
+      setConnectError(getErrorMessage(err, "Wallet connection failed"));
     } finally {
       setConnectingId(null);
     }
@@ -92,20 +90,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     <>
       <RitualSurface />
       <header className="fixed inset-x-0 top-0 z-30 border-b border-cyan/12 bg-void/82 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-3 font-semibold text-ink">
+        <div className="mx-auto flex max-w-7xl flex-nowrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-3 font-semibold text-ink">
             <span className="passport-art grid size-10 place-items-center border border-cyan/35 text-sm text-cyan shadow-rune">RA</span>
             <span className="hidden sm:inline">Ritual Ascension</span>
             <span className="status-pill hidden px-2.5 py-1 font-mono text-xs md:inline">Ritualnet</span>
           </Link>
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 md:flex">
             {navItems.map((item) => (
-              <Link key={item.href} href={item.href} className="rounded-md px-3 py-2 text-sm text-muted transition-colors hover:bg-cyan/5 hover:text-cyan hover-lift">
+              <Link key={item.href} href={item.href} className="whitespace-nowrap rounded-md px-3 py-2 text-sm text-muted transition-colors hover:bg-cyan/5 hover:text-cyan hover-lift">
                 {item.label}
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {hasPrivateAccess ? (
               <div className="detail-cell hidden items-center gap-2 px-3 py-2 text-sm lg:flex scale-in">
                 <CircleGauge className="size-4 text-cyan" />
@@ -134,7 +132,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={() => setWalletMenuOpen((open) => !open)}
-                  className="rune-button inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold hover-lift"
+                  className="rune-button inline-flex min-w-32 items-center justify-center gap-2 px-3 py-2 text-sm font-semibold hover-lift"
                 >
                   <Wallet className="size-4" />
                   <span className="font-mono">{walletLabel}</span>
@@ -157,7 +155,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={openConnectModal}
-                className="rune-button inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold hover-lift"
+                className="rune-button inline-flex min-w-32 items-center justify-center gap-2 px-3 py-2 text-sm font-semibold hover-lift"
               >
                 <Wallet className="size-4" />
                 Connect

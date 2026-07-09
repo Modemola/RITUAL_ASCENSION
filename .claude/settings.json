@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:ritual-ascension.onrender.com)",
+      "WebFetch(domain:ritual-ascension.vercel.app)"
+    ]
+  }
+}

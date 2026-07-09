@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { apiClient, IdentityLink, PassportData, ProfileData } from "./api";
+import { getErrorMessage } from "./errors";
 
 const SESSION_STORAGE_KEY = "ritual.ascension.session.v1";
 
@@ -34,11 +35,6 @@ function clearPersistedSession() {
   window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
 }
 
-function savePersistedSession(wallet: string, authToken: string) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ wallet, authToken }));
-}
-
 export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<UserSession>({
     wallet: null,
@@ -52,49 +48,7 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!raw) return;
-
-    let saved: { wallet?: string; authToken?: string };
-    try {
-      saved = JSON.parse(raw);
-    } catch {
-      window.localStorage.removeItem(SESSION_STORAGE_KEY);
-      return;
-    }
-
-    if (!saved.wallet || !saved.authToken) {
-      window.localStorage.removeItem(SESSION_STORAGE_KEY);
-      return;
-    }
-
-    const { wallet, authToken } = saved;
-    setSession(s => ({ ...s, wallet, authToken, isConnected: true, isLoading: true }));
-
-    Promise.all([
-      apiClient.getPassport(wallet),
-      apiClient.getProfile(wallet),
-    ]).then(([passportRes, profileRes]) => {
-      setSession(s => ({
-        ...s,
-        passport: passportRes.data?.passport ?? null,
-        profile: profileRes.data?.profile ?? null,
-        identityLink: profileRes.data?.profile?.identityLink ?? null,
-        isLoading: false,
-      }));
-    }).catch(() => {
-      clearPersistedSession();
-      setSession({
-        wallet: null,
-        authToken: null,
-        identityLink: null,
-        passport: null,
-        profile: null,
-        isConnected: false,
-        isLoading: false,
-      });
-    });
+    clearPersistedSession();
   }, []);
 
   const connectWallet = useCallback(async (wallet: string, message: string, signature: string) => {
@@ -131,11 +85,11 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         identityLink: profileRes.data?.profile.identityLink ?? null,
         isLoading: false,
       }));
-      savePersistedSession(authData.wallet, authData.token);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to connect wallet";
+      const errorMsg = getErrorMessage(err, "Failed to connect wallet");
       setError(errorMsg);
       setSession((s) => ({ ...s, isLoading: false }));
+      throw new Error(errorMsg);
     }
   }, []);
 
@@ -154,7 +108,7 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isLoading: false,
       }));
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to fetch user data";
+      const errorMsg = getErrorMessage(err, "Failed to fetch user data");
       setError(errorMsg);
       setSession((s) => ({ ...s, isLoading: false }));
     }
@@ -201,10 +155,10 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isLoading: false,
       }));
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to mint passport";
+      const errorMsg = getErrorMessage(err, "Failed to mint passport");
       setError(errorMsg);
       setSession((s) => ({ ...s, isLoading: false }));
-      throw err;
+      throw new Error(errorMsg);
     }
   }, [session.authToken, session.wallet]);
 
@@ -236,10 +190,10 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isLoading: false,
       }));
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to sync passport from chain";
+      const errorMsg = getErrorMessage(err, "Failed to sync passport from chain");
       setError(errorMsg);
       setSession((s) => ({ ...s, isLoading: false }));
-      throw err;
+      throw new Error(errorMsg);
     }
   }, [session.authToken, session.wallet]);
 

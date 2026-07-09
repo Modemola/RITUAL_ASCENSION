@@ -21,13 +21,6 @@ export default function LandingPage() {
   return (
     <main>
       <section className="relative overflow-hidden border-b border-cyan/15">
-        <div className="identity-flow pointer-events-none absolute inset-x-0 top-8 mx-auto hidden h-40 max-w-5xl md:block" aria-hidden="true">
-          <span className="flow-node left-[6%] top-10">WALLET</span>
-          <span className="flow-node left-[42%] top-2">SBT</span>
-          <span className="flow-node right-[6%] top-10">DISCORD</span>
-          <span className="flow-packet packet-a" />
-          <span className="flow-packet packet-b" />
-        </div>
         <div className="relative z-10 mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_0.92fr] lg:items-center">
           <div className="space-y-8 fade-in">
             <div className="eyebrow shine-line fade-in-delay-1">

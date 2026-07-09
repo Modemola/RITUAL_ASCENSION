@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { builderClasses } from "@/lib/data";
 import { useRitual } from "@/lib/store";
 import { apiClient } from "@/lib/api";
+import { getErrorMessage } from "@/lib/errors";
 import { LoadingSpinner, Modal, Toast } from "@/lib/components";
 import {
   BrowserWallet,
@@ -59,7 +60,7 @@ export const OnboardingClient = () => {
         setWalletPickerError("No injected EVM wallet was found in this browser.");
       }
     } catch (error) {
-      setWalletPickerError(error instanceof Error ? error.message : "Failed to discover browser wallets");
+      setWalletPickerError(getErrorMessage(error, "Failed to discover browser wallets"));
     } finally {
       setIsDiscoveringWallets(false);
     }
@@ -84,7 +85,7 @@ export const OnboardingClient = () => {
       setConnectedBrowserWallet(browserWallet);
       setShowWalletModal(false);
     } catch (error) {
-      setWalletPickerError(error instanceof Error ? error.message : "Wallet connection failed");
+      setWalletPickerError(getErrorMessage(error, "Wallet connection failed"));
     }
   };
 
@@ -122,6 +123,11 @@ export const OnboardingClient = () => {
     }
 
     try {
+      const activeWallet = await requestWalletAddress(browserWallet);
+      if (activeWallet.toLowerCase() !== wallet.toLowerCase()) {
+        throw new Error(`MetaMask is using ${shortWallet(activeWallet)}. Switch to ${shortWallet(wallet)} and try again.`);
+      }
+
       if (chainMintEnabled) {
         await mintPassportOnChain(browserWallet, wallet, selectedClass);
         await syncPassportFromChain();
@@ -132,7 +138,7 @@ export const OnboardingClient = () => {
 
       router.push("/dashboard");
     } catch (error) {
-      setMintError(error instanceof Error ? error.message : "Passport mint failed");
+      setMintError(getErrorMessage(error, "Passport mint failed"));
     }
   };
 
@@ -401,3 +407,7 @@ export const OnboardingClient = () => {
     </main>
   );
 };
+
+function shortWallet(wallet: string) {
+  return `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
+}
