@@ -23,10 +23,14 @@ export interface OracleConfig {
   endpoint?: string;
   geminiApiKey?: string;
   geminiModel?: string;
+  groqApiKey?: string;
+  groqModel?: string;
   knowledge?: OracleKnowledgeConfig;
   model: string;
   openaiApiKey?: string;
   openaiModel?: string;
+  openrouterApiKey?: string;
+  openrouterModel?: string;
   provider: "local" | "openai-compatible" | "anthropic" | "gemini" | "openai" | "gemini-openai";
 }
 
@@ -75,6 +79,8 @@ export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
       endpoint: env.ORACLE_ENDPOINT,
       geminiApiKey: env.GEMINI_API_KEY,
       geminiModel: env.GEMINI_MODEL ?? "gemini-2.0-flash",
+      groqApiKey: env.GROQ_API_KEY,
+      groqModel: env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
       knowledge: {
         discord: {
           apiKey: env.ORACLE_DISCORD_API_KEY ?? env.DISCORD_ACTIVITY_API_KEY,
@@ -92,6 +98,8 @@ export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
       model: env.ORACLE_MODEL ?? "gemini-2.0-flash",
       openaiApiKey: env.OPENAI_API_KEY,
       openaiModel: env.OPENAI_MODEL ?? "gpt-4o-mini",
+      openrouterApiKey: env.OPENROUTER_API_KEY,
+      openrouterModel: env.OPENROUTER_MODEL ?? "meta-llama/llama-3.3-70b-instruct:free",
       provider: parseOracleProvider(env.ORACLE_PROVIDER)
     },
     port: Number(env.PORT ?? 4000),

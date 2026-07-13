@@ -264,33 +264,62 @@ export class OracleService {
     let responseText: string | null = null;
     let source = "local";
 
-    const { provider } = this.config;
+    // Try every configured provider in priority order until one answers.
+    // This means adding more API keys directly increases resilience —
+    // each one is a fallback, independent of ORACLE_PROVIDER.
+    const candidates: Array<{
+      name: string;
+      available: boolean;
+      ask: () => Promise<string>;
+    }> = [
+      {
+        name: "gemini",
+        available: Boolean(this.config.geminiApiKey),
+        ask: () => this.askGemini(userMessage, pastMessages, systemPrompt)
+      },
+      {
+        name: "openai",
+        available: Boolean(this.config.openaiApiKey),
+        ask: () => this.askOpenAI(userMessage, pastMessages, systemPrompt)
+      },
+      {
+        name: "groq",
+        available: Boolean(this.config.groqApiKey),
+        ask: () => this.askGroq(userMessage, pastMessages, systemPrompt)
+      },
+      {
+        name: "openrouter",
+        available: Boolean(this.config.openrouterApiKey),
+        ask: () => this.askOpenRouter(userMessage, pastMessages, systemPrompt)
+      },
+      {
+        name: "anthropic",
+        available: Boolean(this.config.apiKey) && this.config.provider === "anthropic",
+        ask: () => this.askAnthropicCompat(userMessage, pastMessages, systemPrompt)
+      },
+      {
+        name: "openai-compatible",
+        available: Boolean(this.config.apiKey) && Boolean(this.config.endpoint) && this.config.provider === "openai-compatible",
+        ask: () => this.askOpenAiCompatible(userMessage, pastMessages, systemPrompt)
+      }
+    ];
 
-    if ((provider === "gemini" || provider === "gemini-openai") && this.config.geminiApiKey) {
-      responseText = await this.askGemini(userMessage, pastMessages, systemPrompt).catch((err) => {
-        console.error(JSON.stringify({ level: "error", event: "oracle_gemini_error", message: err instanceof Error ? err.message : String(err) }));
+    for (const candidate of candidates) {
+      if (!candidate.available) continue;
+
+      responseText = await candidate.ask().catch((err) => {
+        console.error(JSON.stringify({
+          level: "error",
+          event: `oracle_${candidate.name}_error`,
+          message: err instanceof Error ? err.message : String(err)
+        }));
         return null;
       });
-      if (responseText) source = "gemini";
-    }
 
-    if (!responseText && (provider === "openai" || provider === "gemini-openai") && this.config.openaiApiKey) {
-      responseText = await this.askOpenAI(userMessage, pastMessages, systemPrompt).catch((err) => {
-        console.error(JSON.stringify({ level: "error", event: "oracle_openai_error", message: err instanceof Error ? err.message : String(err) }));
-        return null;
-      });
-      if (responseText) source = "openai";
-    }
-
-    // Legacy providers kept for backward compatibility
-    if (!responseText && provider === "anthropic" && this.config.apiKey) {
-      responseText = await this.askAnthropicCompat(userMessage, pastMessages, systemPrompt).catch(() => null);
-      if (responseText) source = "anthropic";
-    }
-
-    if (!responseText && provider === "openai-compatible" && this.config.apiKey && this.config.endpoint) {
-      responseText = await this.askOpenAiCompatible(userMessage, pastMessages, systemPrompt).catch(() => null);
-      if (responseText) source = "openai-compatible";
+      if (responseText) {
+        source = candidate.name;
+        break;
+      }
     }
 
     if (!responseText) {
@@ -338,24 +367,77 @@ export class OracleService {
     history: ConversationMessage[],
     systemPrompt: string
   ): Promise<string> {
-    const client = new OpenAI({ apiKey: this.config.openaiApiKey });
+    return this.askOpenAiStyle({
+      apiKey: this.config.openaiApiKey!,
+      model: this.config.openaiModel ?? "gpt-4o-mini",
+      providerLabel: "OpenAI",
+      userMessage,
+      history,
+      systemPrompt
+    });
+  }
+
+  private async askGroq(
+    userMessage: string,
+    history: ConversationMessage[],
+    systemPrompt: string
+  ): Promise<string> {
+    return this.askOpenAiStyle({
+      apiKey: this.config.groqApiKey!,
+      baseURL: "https://api.groq.com/openai/v1",
+      model: this.config.groqModel ?? "llama-3.3-70b-versatile",
+      providerLabel: "Groq",
+      userMessage,
+      history,
+      systemPrompt
+    });
+  }
+
+  private async askOpenRouter(
+    userMessage: string,
+    history: ConversationMessage[],
+    systemPrompt: string
+  ): Promise<string> {
+    return this.askOpenAiStyle({
+      apiKey: this.config.openrouterApiKey!,
+      baseURL: "https://openrouter.ai/api/v1",
+      model: this.config.openrouterModel ?? "meta-llama/llama-3.3-70b-instruct:free",
+      providerLabel: "OpenRouter",
+      userMessage,
+      history,
+      systemPrompt
+    });
+  }
+
+  // Groq and OpenRouter both speak the OpenAI chat-completions API shape,
+  // so the same SDK client works against their base URLs.
+  private async askOpenAiStyle(input: {
+    apiKey: string;
+    baseURL?: string;
+    model: string;
+    providerLabel: string;
+    userMessage: string;
+    history: ConversationMessage[];
+    systemPrompt: string;
+  }): Promise<string> {
+    const client = new OpenAI({ apiKey: input.apiKey, baseURL: input.baseURL });
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: "system", content: systemPrompt },
-      ...history.map((msg) => ({
+      { role: "system", content: input.systemPrompt },
+      ...input.history.map((msg) => ({
         role: msg.role as "user" | "assistant",
         content: msg.content
       })),
-      { role: "user", content: userMessage }
+      { role: "user", content: input.userMessage }
     ];
 
     const completion = await client.chat.completions.create({
-      model: this.config.openaiModel ?? "gpt-4o-mini",
+      model: input.model,
       messages,
       max_tokens: 512
     });
 
     const text = completion.choices[0]?.message?.content?.trim();
-    if (!text) throw new Error("OpenAI returned empty response");
+    if (!text) throw new Error(`${input.providerLabel} returned empty response`);
     return text;
   }
 
