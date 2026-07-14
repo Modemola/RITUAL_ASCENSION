@@ -4,9 +4,10 @@ import {
   calculateReputation,
   getBuilderClass,
   getLevelProgress,
+  mascots,
   quests
 } from "@ritual/domain";
-import type { PassportProfile, Quest } from "@ritual/domain";
+import type { MascotId, PassportProfile, Quest } from "@ritual/domain";
 import type { OracleConfig } from "../config.js";
 import type { IdentityService } from "./identity-service.js";
 import {
@@ -132,7 +133,11 @@ const STAGE_NAMES: Record<number, string> = {
   5: "Ascendant"
 };
 
-function buildSystemPrompt(context: OracleContext, _knowledge: OracleKnowledgeBundle): string {
+function buildSystemPrompt(
+  context: OracleContext,
+  _knowledge: OracleKnowledgeBundle,
+  mascotId?: MascotId
+): string {
   const p = context.passportSummary;
   const rq = context.recommendedQuest;
   const otherQuests = context.availableQuests
@@ -149,11 +154,15 @@ function buildSystemPrompt(context: OracleContext, _knowledge: OracleKnowledgeBu
         : `${p.completedQuestCount} quests completed.`;
 
   const stageName = STAGE_NAMES[p.stage] ?? `Stage ${p.stage}`;
+  const mascot = mascotId ? mascots.find((m) => m.id === mascotId) : undefined;
 
   const lines = [
     "You are the Oracle — the guiding intelligence of Ritual Ascension, an on-chain reputation platform for builders on the Ritual network.",
     "",
     "Your character: warm, perceptive, direct. You care about this builder's growth. You speak with wisdom but no pretension. You never pad responses — say what matters and stop.",
+    mascot ? "" : undefined,
+    mascot ? mascot.voiceInstructions : undefined,
+    mascot ? "This voice is a layer on top of the character above, not a replacement for it — stay genuinely helpful first." : undefined,
     "",
     "This builder's profile:",
     `  Wallet: ${p.wallet.slice(0, 6)}...${p.wallet.slice(-4)}`,
@@ -215,7 +224,7 @@ export class OracleService {
     private readonly config: OracleConfig = { provider: "local", model: "gemini-2.0-flash" }
   ) {}
 
-  async chat(input: { wallet: string; message?: string; conversationId?: string }) {
+  async chat(input: { wallet: string; message?: string; conversationId?: string; mascotId?: MascotId }) {
     const passport = await this.passport.getPassport(input.wallet);
     if (!passport) {
       return {
@@ -258,7 +267,7 @@ export class OracleService {
       wallet: input.wallet
     });
 
-    const systemPrompt = buildSystemPrompt(context, knowledgeBundle);
+    const systemPrompt = buildSystemPrompt(context, knowledgeBundle, input.mascotId);
     const pastMessages = session.messages.slice();
 
     let responseText: string | null = null;

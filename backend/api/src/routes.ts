@@ -7,10 +7,12 @@ import {
   evolutionStages,
   getBuilderClass,
   getQuest,
+  mascots,
   questCategories,
   quests,
   verifiedRitualProducts
 } from "@ritual/domain";
+import type { MascotId } from "@ritual/domain";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { getRequestContext, json, notFound, readBody } from "./http.js";
 import type { BackendServices } from "./services/backend-services.js";
@@ -423,17 +425,25 @@ export async function handleApiRequest(
   }
 
   if (url.pathname === "/api/oracle/chat" && request.method === "POST") {
-    const body = await readBody(request) as { wallet?: string; message?: string; conversationId?: string };
+    const body = await readBody(request) as {
+      wallet?: string;
+      message?: string;
+      conversationId?: string;
+      mascotId?: string;
+    };
     const authorization = await authorizePassportWallet(request, services, body.wallet);
     if (!authorization.ok) {
       json(response, authorization.statusCode, authorization.body);
       return;
     }
 
+    const mascotId = mascots.some((m) => m.id === body.mascotId) ? (body.mascotId as MascotId) : undefined;
+
     const result = await services.oracle.chat({
       wallet: authorization.wallet,
       message: body.message,
-      conversationId: body.conversationId
+      conversationId: body.conversationId,
+      mascotId
     });
     json(response, result.ok ? 200 : result.statusCode, result.body);
     return;

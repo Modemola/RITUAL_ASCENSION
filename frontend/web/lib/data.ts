@@ -12,10 +12,12 @@ import {
   getLevelProgress,
   getTier,
   leaderboard,
+  mascots,
   questCategories,
   quests,
   verifiedRitualProducts
 } from "@ritual/domain";
+export type { Mascot, MascotId } from "@ritual/domain";
 
 export const appWallet = demoPassport.wallet;
 export const appClass = getBuilderClass(demoPassport.classId);
@@ -33,6 +35,7 @@ export {
   demoTestnetActivity,
   evolutionStages,
   leaderboard,
+  mascots,
   questCategories,
   quests,
   verifiedRitualProducts

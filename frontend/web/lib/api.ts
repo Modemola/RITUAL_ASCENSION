@@ -417,11 +417,11 @@ export const apiClient = {
   getEvolution: () => apiFetch(`/api/passport/evolution`),
 
   // Oracle chat
-  askOracle: (message: string, wallet: string, token?: string, conversationId?: string) =>
+  askOracle: (message: string, wallet: string, token?: string, conversationId?: string, mascotId?: string) =>
     apiFetch<OracleResponse>(`/api/oracle/chat`, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      body: JSON.stringify({ message, wallet, conversationId }),
+      body: JSON.stringify({ message, wallet, conversationId, mascotId }),
     }),
 
   // Ritual testnet-only wallet activity
