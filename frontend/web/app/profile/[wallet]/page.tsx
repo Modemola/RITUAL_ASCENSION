@@ -32,11 +32,11 @@ export default function PublicProfilePage() {
   const className = profile?.passport?.class?.name ?? appClass.name;
   const level = profile?.passport?.level ?? appProgress.level;
   const reputation = profile?.passport?.reputation ?? appReputation;
-  const completed = profile
-    ? quests.filter(q => displayPassport.completedQuestIds.includes(q.id))
-    : quests.filter(q => demoPassport.completedQuestIds.includes(q.id));
-  const unlockedAchievements = profile?.achievements?.length
-    ? profile.achievements
+  const completed = quests.filter(q => displayPassport.completedQuestIds.includes(q.id));
+  // Only fall back to demo "unlocked" badges when there's no real profile at all —
+  // a real profile with zero achievements should show zero, not someone else's demo badges.
+  const unlockedAchievements = profile
+    ? (profile.achievements ?? [])
     : allAchievements.filter(a => a.unlocked);
 
   if (isLoading) {

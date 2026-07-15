@@ -1,4 +1,4 @@
-import { demoPassport, getQuest } from "@ritual/domain";
+import { getQuest } from "@ritual/domain";
 import type {
   QuestAttempt,
   QuestAttemptRepository
@@ -26,7 +26,14 @@ export class AdminReviewService {
     adminWallets: string[] = []
   ) {
     const normalized = adminWallets.map((wallet) => wallet.toLowerCase()).filter(Boolean);
-    this.adminWallets = new Set(normalized.length ? normalized : [demoPassport.wallet.toLowerCase()]);
+    if (!normalized.length) {
+      console.warn(JSON.stringify({
+        level: "warn",
+        event: "admin_wallets_unset",
+        message: "ADMIN_WALLETS is not configured — admin review actions are disabled for every wallet until it is set."
+      }));
+    }
+    this.adminWallets = new Set(normalized);
   }
 
   isAdminWallet(wallet?: string) {

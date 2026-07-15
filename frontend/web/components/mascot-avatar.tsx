@@ -51,7 +51,6 @@ export function MascotAvatar({
       }}
     >
       {!imageFailed ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={`/mascots/${mascot.id}.png`}
           alt={mascot.name}

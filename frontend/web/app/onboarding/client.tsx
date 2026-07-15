@@ -38,7 +38,8 @@ export const OnboardingClient = () => {
     isConnected,
     passport,
     isLoading,
-    error: storeError
+    error: storeError,
+    clearError
   } = useRitual();
   const [selectedClass, setSelectedClass] = useState(1);
   const [activeStep, setActiveStep] = useState<"class" | "mint">("class");
@@ -132,8 +133,12 @@ export const OnboardingClient = () => {
         await mintPassportOnChain(browserWallet, wallet, selectedClass);
         await syncPassportFromChain();
       } else {
-        const mintSignature = await requestMintSignature(browserWallet, wallet, selectedClassData.name);
-        await mintPassport(selectedClass, mintSignature);
+        const { message: mintMessage, signature: mintSignature } = await requestMintSignature(
+          browserWallet,
+          wallet,
+          selectedClassData.name
+        );
+        await mintPassport(selectedClass, mintMessage, mintSignature);
       }
 
       router.push("/dashboard");
@@ -232,8 +237,17 @@ export const OnboardingClient = () => {
             {builderClasses.map((builderClass, i) => (
               <article
                 key={builderClass.id}
+                role="button"
+                tabIndex={0}
+                aria-pressed={selectedClass === builderClass.id}
                 onClick={() => setSelectedClass(builderClass.id)}
-                className={`rune-panel card-shift cursor-pointer p-5 transition-all scale-in-stagger hover-lift ${
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setSelectedClass(builderClass.id);
+                  }
+                }}
+                className={`rune-panel card-shift cursor-pointer p-5 transition-all scale-in-stagger hover-lift focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan/60 ${
                   selectedClass === builderClass.id ? "border-cyan/45 bg-cyan/10 shadow-rune hover-glow" : ""
                 }`}
                 style={{ "--index": i } as React.CSSProperties}
@@ -403,7 +417,7 @@ export const OnboardingClient = () => {
         </div>
       </Modal>
 
-      {storeError ? <Toast type="error" message={storeError} onClose={() => {}} /> : null}
+      {storeError ? <Toast type="error" message={storeError} onClose={clearError} /> : null}
     </main>
   );
 };

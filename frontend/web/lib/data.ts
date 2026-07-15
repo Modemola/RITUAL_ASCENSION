@@ -34,6 +34,7 @@ export {
   demoPassport,
   demoTestnetActivity,
   evolutionStages,
+  getTier,
   leaderboard,
   mascots,
   questCategories,

@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS discord_link_challenges (
 
 CREATE TABLE IF NOT EXISTS passports (
   wallet               TEXT        PRIMARY KEY,
-  token_id             INTEGER     NOT NULL UNIQUE,
+  token_id             BIGINT      NOT NULL UNIQUE,
   class_id             INTEGER     NOT NULL,
   xp                   INTEGER     NOT NULL DEFAULT 0,
   stage                INTEGER     NOT NULL DEFAULT 1,
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS passports (
 
 CREATE TABLE IF NOT EXISTS identity_links (
   wallet                TEXT        PRIMARY KEY,
-  passport_token_id     INTEGER     NOT NULL,
+  passport_token_id     BIGINT      NOT NULL,
   discord_id            TEXT        NOT NULL UNIQUE,
   discord_username      TEXT        NOT NULL,
   discord_avatar_url    TEXT,
@@ -103,7 +103,7 @@ CREATE INDEX IF NOT EXISTS achievement_unlocks_wallet_idx ON achievement_unlocks
 CREATE TABLE IF NOT EXISTS evolution_events (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   wallet      TEXT        NOT NULL,
-  token_id    INTEGER     NOT NULL,
+  token_id    BIGINT      NOT NULL,
   from_stage  INTEGER     NOT NULL,
   to_stage    INTEGER     NOT NULL,
   reason      TEXT        NOT NULL,

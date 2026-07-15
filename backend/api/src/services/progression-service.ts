@@ -13,6 +13,8 @@ import type {
   ProgressionRepository,
   XpEvent
 } from "../repositories/progression-repository.js";
+import { DisabledRitualChainWriter } from "../chain/ritual-chain-client.js";
+import type { RitualChainWriter } from "../chain/ritual-chain-client.js";
 
 export interface ProgressionResult {
   passport: ReturnType<typeof formatProgressionPassport>;
@@ -24,8 +26,25 @@ export interface ProgressionResult {
 export class ProgressionService {
   constructor(
     private readonly passports: PassportRepository,
-    private readonly progression: ProgressionRepository
+    private readonly progression: ProgressionRepository,
+    private readonly chainWriter: RitualChainWriter = new DisabledRitualChainWriter()
   ) {}
+
+  // Off-chain repositories are the source of truth for the API response —
+  // the on-chain settlement happens after and never blocks or fails the request.
+  // Always attach a catch handler (even when disabled) so the rejection from
+  // DisabledRitualChainWriter never surfaces as an unhandled promise rejection.
+  private settleOnChain(promise: Promise<unknown>, context: Record<string, unknown>) {
+    promise.catch((error) => {
+      if (!this.chainWriter.isConfigured()) return;
+      console.error(JSON.stringify({
+        level: "error",
+        event: "chain_write_failed",
+        message: error instanceof Error ? error.message : String(error),
+        ...context
+      }));
+    });
+  }
 
   async applyQuestCompletion(attempt: QuestAttempt): Promise<ProgressionResult | null> {
     const quest = getQuest(attempt.questId);
@@ -49,6 +68,12 @@ export class ProgressionService {
       questAttemptId: attempt.id
     });
     xpEvents.push(questXp.event);
+    if (questXp.created) {
+      this.settleOnChain(
+        this.chainWriter.awardXP(passport.wallet, quest.xp, questXp.event.reason, questXp.event.sourceRef),
+        { action: "awardXP", wallet: passport.wallet, sourceRef: questXp.event.sourceRef }
+      );
+    }
 
     let nextXp = questXp.created ? passport.xp + quest.xp : passport.xp;
     let nextAchievements = passport.achievements;
@@ -74,7 +99,13 @@ export class ProgressionService {
             sourceRef: `achievement-bonus:${passport.wallet}:${achievement.id}`
           });
           xpEvents.push(bonusXp.event);
-          if (bonusXp.created) nextXp += achievement.xpBonus;
+          if (bonusXp.created) {
+            nextXp += achievement.xpBonus;
+            this.settleOnChain(
+              this.chainWriter.awardXP(passport.wallet, achievement.xpBonus, bonusXp.event.reason, bonusXp.event.sourceRef),
+              { action: "awardXP", wallet: passport.wallet, sourceRef: bonusXp.event.sourceRef }
+            );
+          }
         }
       } else {
         nextAchievements = markAchievementUnlocked(nextAchievements, unlock.unlock);
@@ -107,6 +138,10 @@ export class ProgressionService {
         ...nextPassport,
         stage: targetStage
       };
+      this.settleOnChain(
+        this.chainWriter.updateStage(passport.tokenId, targetStage),
+        { action: "updateStage", wallet: passport.wallet, tokenId: passport.tokenId, targetStage }
+      );
 
       const ascendant = achievements.find((achievement) => achievement.id === "ACH_010");
       if (targetStage >= 5 && ascendant) {
@@ -128,7 +163,13 @@ export class ProgressionService {
               sourceRef: `achievement-bonus:${passport.wallet}:${ascendant.id}`
             });
             xpEvents.push(bonusXp.event);
-            if (bonusXp.created) nextPassport = { ...nextPassport, xp: nextPassport.xp + ascendant.xpBonus };
+            if (bonusXp.created) {
+              nextPassport = { ...nextPassport, xp: nextPassport.xp + ascendant.xpBonus };
+              this.settleOnChain(
+                this.chainWriter.awardXP(passport.wallet, ascendant.xpBonus, bonusXp.event.reason, bonusXp.event.sourceRef),
+                { action: "awardXP", wallet: passport.wallet, sourceRef: bonusXp.event.sourceRef }
+              );
+            }
           }
         }
         nextPassport = { ...nextPassport, achievements: nextAchievements };

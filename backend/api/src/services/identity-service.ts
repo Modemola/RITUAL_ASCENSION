@@ -4,6 +4,8 @@ import type { PassportRepository } from "../repositories/passport-repository.js"
 import type { DiscordLinkChallengeRepository } from "../repositories/discord-link-challenge-repository.js";
 import type { IdentityLinkRepository } from "../repositories/identity-link-repository.js";
 import { isWalletAddress, normalizeWallet } from "../validators.js";
+import { DisabledRitualChainWriter } from "../chain/ritual-chain-client.js";
+import type { RitualChainWriter } from "../chain/ritual-chain-client.js";
 
 interface ConnectDiscordInput {
   wallet?: string;
@@ -17,7 +19,8 @@ export class IdentityService {
   constructor(
     private readonly identityLinks: IdentityLinkRepository,
     private readonly discordChallenges: DiscordLinkChallengeRepository,
-    private readonly passports: PassportRepository
+    private readonly passports: PassportRepository,
+    private readonly chainWriter: RitualChainWriter = new DisabledRitualChainWriter()
   ) {}
 
   async getIdentityLink(wallet?: string) {
@@ -176,6 +179,18 @@ export class IdentityService {
     };
 
     const savedIdentityLink = await this.identityLinks.save(identityLink);
+
+    if (this.chainWriter.isConfigured() && savedIdentityLink.discordAccountHash) {
+      this.chainWriter.linkDiscordAccount(normalizedWallet, savedIdentityLink.discordAccountHash).catch((error) => {
+        console.error(JSON.stringify({
+          level: "error",
+          event: "chain_write_failed",
+          action: "linkDiscordAccount",
+          wallet: normalizedWallet,
+          message: error instanceof Error ? error.message : String(error)
+        }));
+      });
+    }
 
     return {
       ok: true as const,

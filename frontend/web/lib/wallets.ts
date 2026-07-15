@@ -113,7 +113,11 @@ export async function requestWalletSignature(wallet: BrowserWallet, address: str
   return signature;
 }
 
-export async function requestMintSignature(wallet: BrowserWallet, address: string, className: string): Promise<string> {
+export async function requestMintSignature(
+  wallet: BrowserWallet,
+  address: string,
+  className: string
+): Promise<{ message: string; signature: string }> {
   const issuedAt = new Date().toISOString();
   const message = [
     "Ritual Ascension passport mint",
@@ -135,7 +139,7 @@ export async function requestMintSignature(wallet: BrowserWallet, address: strin
     throw new Error("Mint signature was not returned");
   }
 
-  return signature;
+  return { message, signature };
 }
 
 export function getChainMintConfig(): ChainMintConfig {

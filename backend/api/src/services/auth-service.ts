@@ -120,7 +120,20 @@ export class AuthService {
       };
     }
 
-    await this.challenges.consume(nonce);
+    // Atomic consume is the real authority against concurrent replay of the
+    // same valid signature — the earlier findByNonce check is just a fast-fail.
+    const consumed = await this.challenges.consume(nonce);
+    if (!consumed) {
+      return {
+        ok: false as const,
+        statusCode: 401,
+        body: {
+          error: "ExpiredNonce",
+          message: "Wallet auth challenge is expired or already used"
+        }
+      };
+    }
+
     const token = this.tokens.sign(normalizedWallet);
 
     return {

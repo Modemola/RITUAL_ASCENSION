@@ -2,6 +2,36 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+// Display preferences (Settings page)
+export const PREFS_STORAGE_KEY = "ritual.ascension.prefs.v1";
+
+export interface Preferences {
+  xpAnimations: boolean;
+  achievementNotifications: boolean;
+  leaderboardVisible: boolean;
+}
+
+export const DEFAULT_PREFERENCES: Preferences = {
+  xpAnimations: true,
+  achievementNotifications: true,
+  leaderboardVisible: true,
+};
+
+export const usePreferences = () => {
+  const [prefs, setPrefs] = useState<Preferences>(DEFAULT_PREFERENCES);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PREFS_STORAGE_KEY);
+      if (raw) setPrefs({ ...DEFAULT_PREFERENCES, ...JSON.parse(raw) });
+    } catch {
+      // ignore malformed storage
+    }
+  }, []);
+
+  return prefs;
+};
+
 // Form validation
 export const validators = {
   wallet: (value: string) => {

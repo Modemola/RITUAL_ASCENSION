@@ -2,45 +2,39 @@
 
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
-
-const PREFS_KEY = "ritual.ascension.prefs.v1";
+import { DEFAULT_PREFERENCES, PREFS_STORAGE_KEY, type Preferences } from "@/lib/hooks";
 
 const PREFERENCE_DEFS = [
-  { key: "xpAnimations", label: "Show XP ignition animations" },
-  { key: "achievementNotifications", label: "Enable achievement notifications" },
-  { key: "leaderboardVisible", label: "Public leaderboard visibility" },
-] as const;
-
-type PrefKey = typeof PREFERENCE_DEFS[number]["key"];
-type Prefs = Record<PrefKey, boolean>;
-
-const DEFAULT_PREFS: Prefs = {
-  xpAnimations: true,
-  achievementNotifications: true,
-  leaderboardVisible: true,
-};
+  { key: "xpAnimations", label: "Show XP ignition animations", caption: undefined },
+  { key: "achievementNotifications", label: "Enable achievement notifications", caption: undefined },
+  {
+    key: "leaderboardVisible",
+    label: "Public leaderboard visibility",
+    caption: "Saved for when the public leaderboard is powered by live rankings — it isn't wired up to real ranking data yet.",
+  },
+] as const satisfies ReadonlyArray<{ key: keyof Preferences; label: string; caption?: string }>;
 
 export default function SettingsPage() {
-  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
+  const [prefs, setPrefs] = useState<Preferences>(DEFAULT_PREFERENCES);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(PREFS_KEY);
-      if (raw) setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
+      const raw = localStorage.getItem(PREFS_STORAGE_KEY);
+      if (raw) setPrefs({ ...DEFAULT_PREFERENCES, ...JSON.parse(raw) });
     } catch {
       // ignore malformed storage
     }
   }, []);
 
-  const toggle = (key: PrefKey) => {
+  const toggle = (key: keyof Preferences) => {
     setPrefs(prev => ({ ...prev, [key]: !prev[key] }));
     setSaved(false);
   };
 
   const save = () => {
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+      localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(prefs));
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
@@ -53,13 +47,16 @@ export default function SettingsPage() {
       <p className="text-cipher text-xs uppercase tracking-[0.22em]">Settings</p>
       <h1 className="display-title text-aurora mt-2 text-4xl slide-up">Display preferences.</h1>
       <section className="rune-panel mt-6 p-5 hover-glow">
-        {PREFERENCE_DEFS.map(({ key, label }, i) => (
+        {PREFERENCE_DEFS.map(({ key, label, caption }, i) => (
           <label
             key={key}
             className="flex cursor-pointer items-center justify-between gap-4 border-b border-cyan/10 py-4 last:border-b-0 fade-in-delay-1 hover-lift"
             style={{ animationDelay: `${i * 50}ms` }}
           >
-            <span>{label}</span>
+            <span>
+              <span className="block">{label}</span>
+              {caption && <span className="mt-1 block text-xs text-muted">{caption}</span>}
+            </span>
             <button
               type="button"
               role="switch"

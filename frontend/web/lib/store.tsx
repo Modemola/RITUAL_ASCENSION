@@ -18,7 +18,7 @@ interface UserSession {
 
 interface RitualContextType extends UserSession {
   connectWallet: (wallet: string, message: string, signature: string) => Promise<void>;
-  mintPassport: (classId: number, mintSignature: string) => Promise<void>;
+  mintPassport: (classId: number, mintMessage: string, mintSignature: string) => Promise<void>;
   syncPassportFromChain: () => Promise<void>;
   connectDiscord: (discordId: string, username: string) => Promise<IdentityLink>;
   disconnectWallet: () => void;
@@ -114,12 +114,12 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
-  const mintPassport = useCallback(async (classId: number, mintSignature: string) => {
+  const mintPassport = useCallback(async (classId: number, mintMessage: string, mintSignature: string) => {
     if (!session.wallet || !session.authToken) {
       throw new Error("Connect your wallet before minting");
     }
 
-    if (!mintSignature) {
+    if (!mintSignature || !mintMessage) {
       throw new Error("Wallet mint signature is required");
     }
 
@@ -130,6 +130,7 @@ export const RitualProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         {
           wallet: session.wallet,
           classId,
+          mintMessage,
           mintSignature,
         },
         session.authToken

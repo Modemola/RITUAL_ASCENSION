@@ -349,7 +349,7 @@ export const apiClient = {
     apiFetch<PassportData>(`/api/passport/${wallet}`),
 
   // Mint user passport
-  mintPassport: (payload: { wallet: string; classId: number; mintSignature: string }, token?: string) =>
+  mintPassport: (payload: { wallet: string; classId: number; mintMessage: string; mintSignature: string }, token?: string) =>
     apiFetch<PassportData>(`/api/passport/mint`, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -367,11 +367,12 @@ export const apiClient = {
   getProfile: (wallet: string) =>
     apiFetch<ProfileData>(`/api/profile/${wallet}`),
 
-  // Get all quests (optional class filter)
-  getQuests: (params?: { classId?: number; category?: string }) => {
+  // Get all quests (optional class filter). Pass wallet to get real per-user attempt status merged in.
+  getQuests: (params?: { classId?: number; category?: string; wallet?: string }) => {
     const search = new URLSearchParams();
     if (params?.classId) search.set("class", String(params.classId));
     if (params?.category) search.set("category", params.category);
+    if (params?.wallet) search.set("wallet", params.wallet);
     const query = search.toString() ? `?${search}` : "";
     return apiFetch<QuestsData>(`/api/quests${query}`);
   },
@@ -425,12 +426,17 @@ export const apiClient = {
     }),
 
   // Ritual testnet-only wallet activity
-  getTestnetActivity: (wallet: string) =>
-    apiFetch<TestnetActivityData>(`/api/testnet/activity?wallet=${encodeURIComponent(wallet)}`),
+  getTestnetActivity: (wallet: string, token: string) =>
+    apiFetch<TestnetActivityData>(`/api/testnet/activity?wallet=${encodeURIComponent(wallet)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
 
   // Discord account activity
-  getDiscordActivity: (discordId: string) =>
-    apiFetch<DiscordActivityData>(`/api/discord/activity?discordId=${encodeURIComponent(discordId)}`),
+  getDiscordActivity: (wallet: string, discordId: string, token: string) =>
+    apiFetch<DiscordActivityData>(
+      `/api/discord/activity?wallet=${encodeURIComponent(wallet)}&discordId=${encodeURIComponent(discordId)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    ),
 
   // Mock Discord connection
   createAuthNonce: (wallet: string) =>

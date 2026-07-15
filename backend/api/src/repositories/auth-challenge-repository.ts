@@ -11,7 +11,8 @@ export interface AuthChallenge {
 export interface AuthChallengeRepository {
   create(challenge: AuthChallenge): Promise<AuthChallenge>;
   findByNonce(nonce: string): Promise<AuthChallenge | undefined>;
-  consume(nonce: string): Promise<void>;
+  /** Atomically marks the challenge consumed; returns undefined if it was already consumed (or missing). */
+  consume(nonce: string): Promise<AuthChallenge | undefined>;
 }
 
 export class InMemoryAuthChallengeRepository implements AuthChallengeRepository {
@@ -28,9 +29,11 @@ export class InMemoryAuthChallengeRepository implements AuthChallengeRepository 
 
   async consume(nonce: string) {
     const challenge = this.challengesByNonce.get(nonce);
-    if (challenge) {
-      this.challengesByNonce.set(nonce, { ...challenge, consumedAt: new Date() });
-    }
+    if (!challenge || challenge.consumedAt) return undefined;
+
+    const consumed = { ...challenge, consumedAt: new Date() };
+    this.challengesByNonce.set(nonce, consumed);
+    return consumed;
   }
 }
 
@@ -63,14 +66,18 @@ export class PostgresAuthChallengeRepository implements AuthChallengeRepository 
   }
 
   async consume(nonce: string) {
-    await this.pool.query(
+    const result = await this.pool.query<AuthChallengeRow>(
       `
         UPDATE wallet_sessions
         SET consumed_at = now()
         WHERE nonce = $1
+          AND consumed_at IS NULL
+        RETURNING wallet, nonce, expires_at, consumed_at
       `,
       [nonce]
     );
+
+    return result.rows[0] ? toAuthChallenge(result.rows[0]) : undefined;
   }
 }
 

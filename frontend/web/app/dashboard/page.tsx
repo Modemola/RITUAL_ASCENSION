@@ -3,23 +3,34 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Activity, BadgeCheck, Bot, ChevronRight, Flame, Hexagon, MessageCircle, Shield, Sparkles, Wallet } from "lucide-react";
-import { appClass, appProgress, appReputation, appTier, demoIdentityLink, demoPassport, evolutionStages, quests } from "@/lib/data";
+import { appClass, appProgress, appReputation, appTier, demoIdentityLink, demoPassport, evolutionStages, getTier, quests as staticQuests } from "@/lib/data";
 import { apiClient, ActivityFeedItem } from "@/lib/api";
+import type { Quest } from "@ritual/domain";
 import { useRitual } from "@/lib/store";
+import { usePreferences } from "@/lib/hooks";
 import { Skeleton, SkeletonText } from "@/lib/components";
 import { PrivateGate } from "@/lib/private-gate";
 
 export default function DashboardPage() {
   const { wallet, authToken, isConnected, passport, isLoading, identityLink } = useRitual();
-  const activeQuest = quests.find((quest) => quest.status === "in_progress") ?? quests[0];
+  const prefs = usePreferences();
   const [activity, setActivity] = useState<ActivityFeedItem[]>([]);
+  const [liveQuests, setLiveQuests] = useState<Quest[]>(staticQuests);
 
   useEffect(() => {
     if (!wallet || !isConnected) return;
     apiClient.getActivity(wallet, authToken ?? undefined, 8).then(res => {
       if (res.data) setActivity(res.data.activity);
     });
+    apiClient.getQuests({ wallet }).then(res => {
+      if (res.data) setLiveQuests(res.data.quests);
+    });
   }, [wallet, isConnected, authToken]);
+
+  const activeQuest =
+    liveQuests.find((quest) => quest.status === "in_progress") ??
+    liveQuests.find((quest) => quest.status === "available") ??
+    liveQuests[0];
 
   const today = new Date().toDateString();
   const xpToday = activity
@@ -28,10 +39,10 @@ export default function DashboardPage() {
   const xpTodayDisplay = activity.length === 0 ? "—" : xpToday > 0 ? `+${xpToday}` : "0";
 
   const displayPassport = passport || demoPassport;
-  const displayClass = appClass;
-  const displayProgress = appProgress;
-  const displayReputation = appReputation;
-  const displayTier = appTier;
+  const displayClass = passport?.class ?? appClass;
+  const displayProgress = passport?.levelProgress ?? appProgress;
+  const displayReputation = passport?.reputation ?? appReputation;
+  const displayTier = passport ? getTier(passport.level) : appTier;
   const displayIdentity = identityLink ?? demoIdentityLink;
   const displayWallet = wallet ?? displayPassport.wallet;
   const discordInitial = displayIdentity.discordUsername.slice(0, 1).toUpperCase();
@@ -83,7 +94,7 @@ export default function DashboardPage() {
                 <p className="mt-2 max-w-xl text-white/68">{displayClass.focus}</p>
                 <div className="mt-6 h-4 overflow-hidden rounded-full border border-cyan/25 bg-black/45">
                   <div
-                    className="h-full bg-gradient-to-r from-cyan via-aqua to-green progress-fill"
+                    className={`h-full bg-gradient-to-r from-cyan via-aqua to-green ${prefs.xpAnimations ? "progress-fill" : ""}`}
                     style={{ width: `${displayProgress.percent}%` }}
                   />
                 </div>
@@ -179,8 +190,15 @@ export default function DashboardPage() {
               <h2 className="section-title text-xl font-semibold">Oracle recommendation</h2>
             </div>
             <p className="mt-3 leading-7 text-muted">
-              Finish <span className="font-medium text-cyan">{activeQuest.title}</span>. It is already in
-              progress and moves your passport toward the next evolution stage.
+              {activeQuest ? (
+                <>
+                  {activeQuest.status === "in_progress" ? "Finish" : "Try"}{" "}
+                  <span className="font-medium text-cyan">{activeQuest.title}</span> next. It moves your passport
+                  toward the next evolution stage.
+                </>
+              ) : (
+                "You're caught up on every available quest — check back soon for more."
+              )}
             </p>
             <Link href="/oracle" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-cyan hover-lift">
               Open Oracle <ChevronRight className="size-4" />

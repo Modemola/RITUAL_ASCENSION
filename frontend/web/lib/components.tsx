@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, ReactNode } from "react";
+import { Component, CSSProperties, ReactNode, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
 export const LoadingSpinner = ({
@@ -92,6 +92,8 @@ export const Toast = ({
 
   return (
     <div
+      role="status"
+      aria-live={type === "error" ? "assertive" : "polite"}
       className={`fixed bottom-4 left-4 right-4 z-50 rounded-lg border px-4 py-3 shadow-lg animate-slide-up sm:right-auto sm:max-w-sm fade-in ${bgClass}`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -103,6 +105,9 @@ export const Toast = ({
     </div>
   );
 };
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export const Modal = ({
   isOpen,
@@ -117,15 +122,57 @@ export const Modal = ({
   onClose: () => void;
   actions?: ReactNode;
 }) => {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = "modal-title";
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const panel = panelRef.current;
+    const focusable = panel?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+    focusable?.[0]?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab" || !panel) return;
+
+      const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (!items.length) return;
+
+      const first = items[0];
+      const last = items[items.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/64 backdrop-blur-md" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 fade-in">
-        <div className="rune-panel w-full max-w-lg scale-in shadow-rune">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 fade-in"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <div ref={panelRef} className="rune-panel w-full max-w-lg scale-in shadow-rune">
           <div className="flex items-center justify-between border-b border-cyan/12 px-5 py-4 sm:px-6">
-            <h2 className="text-lg font-semibold sm:text-xl">{title}</h2>
+            <h2 id={titleId} className="text-lg font-semibold sm:text-xl">{title}</h2>
             <button
               type="button"
               onClick={onClose}
@@ -143,30 +190,47 @@ export const Modal = ({
   );
 };
 
-export const ErrorBoundary = ({
-  children,
-  error,
-  onRetry,
-}: {
+interface ErrorBoundaryProps {
   children: ReactNode;
-  error?: string | null;
-  onRetry?: () => void;
-}) => {
-  if (!error) return <>{children}</>;
+  fallback?: (error: Error, reset: () => void) => ReactNode;
+}
 
-  return (
-    <div className="rune-panel border-red-500/30 bg-red-500/5 p-6">
-      <div className="space-y-4">
-        <div>
-          <h3 className="font-semibold text-red-400">Something went wrong</h3>
-          <p className="mt-2 text-sm text-muted">{error}</p>
-        </div>
-        {onRetry ? (
-          <button type="button" onClick={onRetry} className="rune-button px-4 py-2 text-sm font-semibold">
+interface ErrorBoundaryState {
+  error: Error | null;
+}
+
+// A real React error boundary (class components are the only way to catch
+// render errors) — catches crashes in its subtree instead of showing a blank page.
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: { componentStack?: string | null }) {
+    console.error("Unhandled render error:", error, info.componentStack);
+  }
+
+  reset = () => this.setState({ error: null });
+
+  render() {
+    const { error } = this.state;
+    if (!error) return this.props.children;
+    if (this.props.fallback) return this.props.fallback(error, this.reset);
+
+    return (
+      <div className="rune-panel border-red-500/30 bg-red-500/5 p-6">
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-semibold text-red-400">Something went wrong</h3>
+            <p className="mt-2 text-sm text-muted">{error.message}</p>
+          </div>
+          <button type="button" onClick={this.reset} className="rune-button px-4 py-2 text-sm font-semibold">
             Try again
           </button>
-        ) : null}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
+}

@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, MessageCircle, Share2, TestTube2, Wallet, Zap } from "lucide-react";
-import { useMemo, useState } from "react";
+import { CheckCircle2, ChevronLeft, MessageCircle, Share2, TestTube2, Wallet, Zap } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { apiClient, QuestAttempt, VerificationData } from "@/lib/api";
-import { quests } from "@/lib/data";
-import { Toast } from "@/lib/components";
-import { useForm } from "@/lib/hooks";
+import { quests as staticQuests } from "@/lib/data";
+import { LoadingSpinner, Toast } from "@/lib/components";
+import { useForm, usePreferences } from "@/lib/hooks";
 import { useRitual } from "@/lib/store";
 
 const difficultyColors = {
@@ -19,16 +19,61 @@ const difficultyColors = {
 
 export const QuestDetailClient = ({ questId }: { questId: string }) => {
   const { wallet, authToken, isConnected, identityLink, connectDiscord } = useRitual();
+  const prefs = usePreferences();
   const [discordId, setDiscordId] = useState("");
   const [discordUsername, setDiscordUsername] = useState("");
   const [verification, setVerification] = useState<VerificationData["verification"] | null>(null);
   const [attempt, setAttempt] = useState<QuestAttempt | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const quest = useMemo(() => quests.find((item) => item.id === questId) ?? quests[0], [questId]);
+  const [isLoading, setIsLoading] = useState(true);
+  const staticQuest = useMemo(() => staticQuests.find((item) => item.id === questId), [questId]);
+  const [quest, setQuest] = useState(staticQuest);
+
+  useEffect(() => {
+    setQuest(staticQuest);
+    setAttempt(null);
+
+    if (!wallet) {
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchQuest = async () => {
+      try {
+        setIsLoading(true);
+        const response = await apiClient.getQuests({ wallet });
+        if (cancelled) return;
+        if (response.error || !response.data) {
+          console.warn("Failed to fetch live quest status, showing catalog defaults:", response.error);
+          return;
+        }
+        const match = response.data.quests.find((item) => item.id === questId);
+        if (match) {
+          setQuest(match);
+          setAttempt(match.attempt ?? null);
+        } else {
+          setQuest(undefined);
+        }
+      } catch (err) {
+        if (!cancelled) console.error("Error fetching quest:", err);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    fetchQuest();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questId, wallet]);
 
   const form = useForm(
     { proof: "" },
     async (values) => {
+      if (!quest) throw new Error("Quest not loaded");
+
       const response = await apiClient.verifyQuest(
         quest.id,
         {
@@ -45,12 +90,40 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
 
       setAttempt(response.data.attempt ?? null);
       setVerification(response.data.verification);
+
+      const unlocked = response.data.progression?.unlockedAchievements ?? [];
+      const message =
+        prefs.achievementNotifications && unlocked.length
+          ? `${response.data.verification.reason} Achievement unlocked: ${unlocked.map((a) => a.name).join(", ")}.`
+          : response.data.verification.reason;
+
       setToast({
         type: response.data.verification.ok ? "success" : "error",
-        message: response.data.verification.reason,
+        message,
       });
     }
   );
+
+  if (!quest) {
+    if (isLoading) {
+      return (
+        <main className="mx-auto flex max-w-4xl justify-center px-4 py-16 sm:px-6">
+          <LoadingSpinner size="md" message="Loading quest..." />
+        </main>
+      );
+    }
+
+    return (
+      <main className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6">
+        <p className="section-title text-xl font-semibold">Quest not found</p>
+        <p className="copy-muted mt-2">This quest doesn&apos;t exist or may have been removed.</p>
+        <Link href="/quests" className="quiet-button mt-6 inline-flex items-center gap-2 px-4 py-2 font-semibold hover-lift">
+          <ChevronLeft className="size-4" />
+          Back to quests
+        </Link>
+      </main>
+    );
+  }
 
   const handleDiscordConnect = async () => {
     try {
@@ -186,7 +259,12 @@ export const QuestDetailClient = ({ questId }: { questId: string }) => {
                 </span>
               ) : null}
             </div>
-            {needsWallet && !isConnected ? (
+            {attempt?.status === "completed" ? (
+              <div className="detail-cell flex items-center gap-3 border-green/30 bg-green/10 p-4 text-green">
+                <CheckCircle2 className="size-5 shrink-0" />
+                <span>You&apos;ve already completed this task — nice work.</span>
+              </div>
+            ) : needsWallet && !isConnected ? (
               <div className="detail-cell border-orange-500/30 bg-orange-500/5 p-4 text-center text-muted">
                 Connect your wallet before verifying this task.
               </div>

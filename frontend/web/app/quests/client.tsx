@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { ArrowUpRight, CheckCircle2, Clock3, Lock, MessageCircle, Search, TestTube2, Wrench } from "lucide-react";
-import { useMemo, useState } from "react";
-import { demoDiscordActivity, demoTestnetActivity, questCategories, quests } from "@/lib/data";
+import { useEffect, useMemo, useState } from "react";
+import { demoDiscordActivity, demoTestnetActivity, questCategories, quests as staticQuests } from "@/lib/data";
+import { apiClient } from "@/lib/api";
+import { useRitual } from "@/lib/store";
+import { LoadingSpinner } from "@/lib/components";
 
 const statusIcon = {
   available: Clock3,
@@ -26,8 +29,38 @@ const categoryIcon = {
 };
 
 export function QuestsClient() {
+  const { wallet } = useRitual();
   const [activeCategory, setActiveCategory] = useState("builders");
   const [search, setSearch] = useState("");
+  const [quests, setQuests] = useState(staticQuests);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!wallet) return;
+
+    let cancelled = false;
+    const fetchQuests = async () => {
+      try {
+        setIsLoading(true);
+        const response = await apiClient.getQuests({ wallet });
+        if (cancelled) return;
+        if (response.error || !response.data) {
+          console.warn("Failed to fetch live quest status, showing catalog defaults:", response.error);
+        } else {
+          setQuests(response.data.quests);
+        }
+      } catch (err) {
+        if (!cancelled) console.error("Error fetching quests:", err);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    fetchQuests();
+    return () => {
+      cancelled = true;
+    };
+  }, [wallet]);
 
   const filteredQuests = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -41,7 +74,7 @@ export function QuestsClient() {
 
       return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, search]);
+  }, [activeCategory, search, quests]);
 
   const activeCategoryData = questCategories.find((category) => category.id === activeCategory) ?? questCategories[0];
   const ActiveIcon = categoryIcon[activeCategoryData.id];
@@ -125,6 +158,7 @@ export function QuestsClient() {
           className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-muted"
           placeholder="Search tasks, proof types, or XP rewards"
         />
+        {isLoading && <LoadingSpinner size="sm" />}
       </div>
 
       <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">

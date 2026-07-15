@@ -135,7 +135,7 @@ const STAGE_NAMES: Record<number, string> = {
 
 function buildSystemPrompt(
   context: OracleContext,
-  _knowledge: OracleKnowledgeBundle,
+  knowledge: OracleKnowledgeBundle,
   mascotId?: MascotId
 ): string {
   const p = context.passportSummary;
@@ -172,16 +172,54 @@ function buildSystemPrompt(
     rq ? `  Best next quest: "${rq.title}" — ${rq.xp} XP, ${rq.difficulty} difficulty` : "",
     otherQuests ? `  Other quests available: ${otherQuests}` : "",
     "",
+    "Ground truth about Ritual and Ritual Ascension — use these facts for any question about the network, contracts, classes, quests, or products. Never invent a chain ID, contract name, class name/count, or address that isn't listed here:",
+    ...renderKnowledgeSummary(knowledge),
+    "",
     "How to respond:",
     "- Answer what they actually asked. Don't pivot to quest recommendations unless they're asking for direction.",
     "- Keep it to 2–4 sentences unless they ask for more.",
     "- If recommending a quest, name it and say why it fits this specific builder — not a generic pitch.",
     "- If they sound frustrated or stuck, acknowledge it before helping.",
     "- Never say 'As an AI' or anything that breaks character.",
-    "- No bullet lists, JSON, or code blocks unless they explicitly ask."
+    "- No bullet lists, JSON, or code blocks unless they explicitly ask.",
+    "- If asked something about Ritual that isn't covered in the ground truth above, say plainly that you don't have that detail rather than guessing."
   ];
 
   return lines.filter((l) => l !== undefined).join("\n");
+}
+
+function renderKnowledgeSummary(knowledge: OracleKnowledgeBundle): string[] {
+  const lines: string[] = [];
+  const basics = knowledge.sources.find((s) => s.id === "ritual-basics");
+
+  if (basics?.data) {
+    const data = basics.data as {
+      network: { name: string; chainId?: string; passportNftAddress?: string; progressManagerAddress?: string };
+      contracts: { passport: string; progress: string };
+      evolutionStages: Array<{ id: number; name: string }>;
+      builderClasses: Array<{ id: number; name: string; focus: string }>;
+    };
+    lines.push(`  Network: ${data.network.name}, chain ID ${data.network.chainId ?? "unknown"}`);
+    lines.push(
+      `  PassportNFT contract${data.network.passportNftAddress ? ` (${data.network.passportNftAddress})` : ""}: ${data.contracts.passport}`
+    );
+    lines.push(
+      `  ProgressManager contract${data.network.progressManagerAddress ? ` (${data.network.progressManagerAddress})` : ""}: ${data.contracts.progress}`
+    );
+    lines.push(
+      `  Builder classes (${data.builderClasses.length} total): ${data.builderClasses.map((c) => `${c.name} — ${c.focus}`).join("; ")}`
+    );
+    lines.push(`  Evolution stages (${data.evolutionStages.length} total): ${data.evolutionStages.map((s) => s.name).join(" → ")}`);
+  }
+
+  for (const source of knowledge.sources) {
+    if (source.id === "ritual-basics") continue;
+    if (source.id === "ritual-quest-catalog" || source.id === "verified-ritual-products" || source.freshness === "live") {
+      lines.push(`  ${source.label}: ${source.summary}`);
+    }
+  }
+
+  return lines;
 }
 
 // ---------------------------------------------------------------------------

@@ -9,8 +9,8 @@ export default function AchievementsPage() {
   const { passport, isConnected } = useRitual();
 
   const unlockedIds = new Set(
-    isConnected && passport?.achievements
-      ? passport.achievements.map((a) => a.id)
+    isConnected && passport
+      ? (passport.achievements ?? []).map((a) => a.id)
       : staticAchievements.filter((a) => a.unlocked).map((a) => a.id)
   );
 

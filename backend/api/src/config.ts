@@ -13,6 +13,7 @@ export interface ApiConfig {
 export interface ChainConfig {
   chainId?: string;
   indexerLookbackBlocks?: number;
+  operatorPrivateKey?: string;
   passportAddress?: string;
   progressAddress?: string;
   rpcUrl?: string;
@@ -63,10 +64,11 @@ export interface VerificationConfig {
 export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   return {
     adminWallets: parseAdminWallets(env.ADMIN_WALLETS),
-    allowedOrigins: parseList(env.ALLOWED_ORIGINS, ["*"]),
+    allowedOrigins: parseList(env.ALLOWED_ORIGINS, []),
     chain: {
       chainId: env.RITUAL_CHAIN_ID,
       indexerLookbackBlocks: Number(env.RITUAL_INDEXER_LOOKBACK_BLOCKS ?? 100_000),
+      operatorPrivateKey: env.BACKEND_OPERATOR_PRIVATE_KEY,
       passportAddress: env.PASSPORT_NFT_ADDRESS,
       progressAddress: env.PROGRESS_MANAGER_ADDRESS,
       rpcUrl: env.RITUAL_RPC_URL

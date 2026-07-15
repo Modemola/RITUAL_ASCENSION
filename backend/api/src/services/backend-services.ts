@@ -7,8 +7,8 @@ import {
   PostgresDiscordLinkChallengeRepository
 } from "../repositories/discord-link-challenge-repository.js";
 import type { ChainConfig, OracleConfig, VerificationConfig } from "../config.js";
-import { createRitualChainClient } from "../chain/ritual-chain-client.js";
-import type { RitualChainClient } from "../chain/ritual-chain-client.js";
+import { createRitualChainClient, createRitualChainWriter } from "../chain/ritual-chain-client.js";
+import type { RitualChainClient, RitualChainWriter } from "../chain/ritual-chain-client.js";
 import { createPostgresPool } from "../db/postgres.js";
 import {
   InMemoryIdentityLinkRepository,
@@ -49,6 +49,7 @@ interface BackendServiceOptions {
   adminWallets?: string[];
   chain?: ChainConfig;
   chainClient?: RitualChainClient;
+  chainWriter?: RitualChainWriter;
   databaseUrl?: string;
   jwtSecret?: string;
   oracle?: OracleConfig;
@@ -93,11 +94,15 @@ export function createBackendServices(options: BackendServiceOptions = {}): Back
   const reviewRecords = options.databaseUrl
     ? new PostgresReviewRecordRepository(pool!)
     : new InMemoryReviewRecordRepository();
-  const identity = new IdentityService(identityLinks, discordChallenges, passports);
+
+  const chain = options.chain ?? {};
+  const chainWriter = options.chainWriter ?? createRitualChainWriter(chain, chain.operatorPrivateKey);
+
+  const identity = new IdentityService(identityLinks, discordChallenges, passports, chainWriter);
   const questVerification = new QuestVerificationService(identity, {
     verification: options.verification
   });
-  const progression = new ProgressionService(passports, progressionRepository);
+  const progression = new ProgressionService(passports, progressionRepository, chainWriter);
   const adminReviews = new AdminReviewService(
     reviewRecords,
     questAttempts,
@@ -107,8 +112,6 @@ export function createBackendServices(options: BackendServiceOptions = {}): Back
 
   const passport = new PassportService(passports);
   const quests = new QuestEngineService(questAttempts, questVerification, progression, adminReviews);
-
-  const chain = options.chain ?? {};
 
   return {
     adminReviews,

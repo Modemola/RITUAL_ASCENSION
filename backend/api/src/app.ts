@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import type { ChainConfig, OracleConfig, VerificationConfig } from "./config.js";
 import type { RitualChainClient } from "./chain/ritual-chain-client.js";
-import { json, prepareRequest, serverError } from "./http.js";
+import { json, PayloadTooLargeError, prepareRequest, serverError } from "./http.js";
 import { handleApiRequest } from "./routes.js";
 import { createBackendServices } from "./services/backend-services.js";
 
@@ -47,7 +47,14 @@ export function createApiServer(options: ApiServerOptions = {}) {
 
       if (!response.headersSent) {
         const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
-        json(response, 500, serverError(url.pathname, context.requestId));
+        if (error instanceof PayloadTooLargeError) {
+          json(response, 413, {
+            error: "PayloadTooLarge",
+            message: error.message
+          });
+        } else {
+          json(response, 500, serverError(url.pathname, context.requestId));
+        }
       } else {
         response.end();
       }

@@ -29,7 +29,7 @@ export function prepareRequest(
     ? incomingRequestId[0]
     : incomingRequestId || randomUUID();
   const context: RequestContext = {
-    allowedOrigins: options.allowedOrigins ?? ["*"],
+    allowedOrigins: options.allowedOrigins ?? [],
     origin: Array.isArray(request.headers.origin) ? request.headers.origin[0] : request.headers.origin,
     requestId,
     startedAt: Date.now()
@@ -81,10 +81,27 @@ export function notFound(path: string, requestId?: string): ApiErrorBody {
   };
 }
 
+const MAX_BODY_BYTES = 1_048_576; // 1MB — generous for this API's JSON payloads
+
+export class PayloadTooLargeError extends Error {
+  constructor() {
+    super("Request body exceeds the maximum allowed size");
+    this.name = "PayloadTooLargeError";
+  }
+}
+
 export async function readBody(request: IncomingMessage) {
   const chunks: Buffer[] = [];
+  let totalBytes = 0;
   for await (const chunk of request) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    totalBytes += buffer.length;
+    if (totalBytes > MAX_BODY_BYTES) {
+      // Stop reading and let the caller respond with a clean 413 — destroying
+      // the socket here would reset the connection before any response ships.
+      throw new PayloadTooLargeError();
+    }
+    chunks.push(buffer);
   }
   if (!chunks.length) return {};
 
@@ -97,7 +114,7 @@ export async function readBody(request: IncomingMessage) {
 
 function getCorsHeaders(response: ServerResponse, context?: RequestContext) {
   const origin = context?.origin;
-  const allowedOrigins = context?.allowedOrigins?.length ? context.allowedOrigins : ["*"];
+  const allowedOrigins = context?.allowedOrigins ?? [];
 
   if (allowedOrigins.includes("*")) {
     return { "Access-Control-Allow-Origin": "*" };

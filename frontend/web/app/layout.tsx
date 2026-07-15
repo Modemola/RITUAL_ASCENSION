@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReactNode } from "react";
 import { AppShell } from "./app-shell";
 import { RitualProvider } from "@/lib/store";
+import { ErrorBoundary } from "@/lib/components";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,7 +15,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body>
         <RitualProvider>
-          <AppShell>{children}</AppShell>
+          <AppShell>
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </AppShell>
         </RitualProvider>
       </body>
     </html>

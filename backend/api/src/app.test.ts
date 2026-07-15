@@ -3,6 +3,7 @@ import { after, before, describe, it } from "node:test";
 import type { Server } from "node:http";
 import type { HDNodeWallet } from "ethers";
 import { Wallet } from "ethers";
+import { getBuilderClass } from "@ritual/domain";
 import { createApiServer } from "./app.js";
 
 let server: Server;
@@ -38,13 +39,24 @@ async function authenticateWallet(wallet: HDNodeWallet) {
 }
 
 async function mintPassport(wallet: HDNodeWallet, token: string, classId = 2) {
-  const mintSignature = await wallet.signMessage(`Mint Ritual Ascension passport class ${classId}`);
+  const mintMessage = [
+    "Ritual Ascension passport mint",
+    "",
+    "Sign this message to mint your Soulbound Passport in local demo mode.",
+    "When a PassportNFT address is configured, the app will use an on-chain mint transaction instead.",
+    "",
+    `Wallet: ${wallet.address}`,
+    `Class: ${getBuilderClass(classId as 1 | 2 | 3 | 4 | 5).name}`,
+    `Issued At: ${new Date().toISOString()}`
+  ].join("\n");
+  const mintSignature = await wallet.signMessage(mintMessage);
   return apiFetch("/api/passport/mint", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({
       wallet: wallet.address,
       classId,
+      mintMessage,
       mintSignature
     })
   });
@@ -230,7 +242,7 @@ describe("Ritual Ascension API", () => {
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         wallet: wallet.address,
-        proof: "0x1234567890abcdef"
+        proof: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
       })
     });
 
@@ -257,7 +269,7 @@ describe("Ritual Ascension API", () => {
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         wallet: wallet.address,
-        proof: "0x1234567890abcdef"
+        proof: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
       })
     });
     assert.equal(duplicate.response.status, 409);
@@ -277,7 +289,7 @@ describe("Ritual Ascension API", () => {
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         wallet: wallet.address,
-        proof: "0x1234567890abcdef"
+        proof: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
       })
     });
 
@@ -535,13 +547,9 @@ describe("Ritual Ascension API", () => {
 
     assert.equal(response.status, 200);
     assert.equal(body.source, "local");
+    assert.equal(typeof body.conversationId, "string");
     assert.equal(typeof body.message, "string");
-    assert.equal(body.recommendedQuest.id, "llm-precompile");
-    assert.equal(typeof body.learningOutcome, "string");
-    assert.equal(typeof body.nextMilestone, "string");
-    assert(body.sources.some((source: { id: string }) => source.id === "ritual-basics"));
-    assert(body.sources.some((source: { id: string }) => source.id === "demo-discord-intelligence"));
-    assert(body.sourceNotes.some((note: string) => note.includes("Discord intelligence endpoint is not configured")));
+    assert(body.message.includes("Call the Ritual LLM Precompile"));
   });
 
   it("returns a clear error when chain sync is not configured", async () => {

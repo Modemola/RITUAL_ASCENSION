@@ -155,19 +155,17 @@ export async function handleApiRequest(
   }
 
   if (url.pathname === "/api/testnet/activity") {
-    const wallet = url.searchParams.get("wallet") ?? demoTestnetActivity.wallet;
-    if (!services.identity.hasLinkedWallet(wallet)) {
-      json(response, 403, {
-        error: "IdentityMismatch",
-        message: "Only the wallet linked to the Soulbound Passport can be checked"
-      });
+    const wallet = url.searchParams.get("wallet") ?? undefined;
+    const authorization = await authorizePassportWallet(request, services, wallet);
+    if (!authorization.ok) {
+      json(response, authorization.statusCode, authorization.body);
       return;
     }
 
     json(response, 200, {
       activity: {
         ...demoTestnetActivity,
-        wallet,
+        wallet: authorization.wallet,
         network: "ritual-testnet"
       }
     });
@@ -175,11 +173,18 @@ export async function handleApiRequest(
   }
 
   if (url.pathname === "/api/discord/activity") {
-    const discordId = url.searchParams.get("discordId") ?? demoDiscordActivity.discordId;
-    if (discordId && !(await services.identity.hasDiscordId(discordId))) {
+    const wallet = url.searchParams.get("wallet") ?? undefined;
+    const discordId = url.searchParams.get("discordId") ?? undefined;
+    const authorization = await authorizePassportWallet(request, services, wallet);
+    if (!authorization.ok) {
+      json(response, authorization.statusCode, authorization.body);
+      return;
+    }
+
+    if (!discordId || !(await services.identity.hasLinkedDiscord(authorization.wallet, discordId))) {
       json(response, 403, {
         error: "IdentityMismatch",
-        message: "Only the Discord account linked to the Soulbound Passport can be checked"
+        message: "Only the Discord account linked to this wallet's Soulbound Passport can be checked"
       });
       return;
     }
@@ -242,7 +247,12 @@ export async function handleApiRequest(
   }
 
   if (url.pathname === "/api/passport/mint" && request.method === "POST") {
-    const body = await readBody(request) as { wallet?: string; classId?: number; mintSignature?: string };
+    const body = await readBody(request) as {
+      wallet?: string;
+      classId?: number;
+      mintMessage?: string;
+      mintSignature?: string;
+    };
     const authorization = authorizeWallet(request, services, body.wallet);
     if (!authorization.ok) {
       json(response, authorization.statusCode, authorization.body);
