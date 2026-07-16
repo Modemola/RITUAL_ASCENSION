@@ -13,6 +13,7 @@ export interface ApiConfig {
 export interface ChainConfig {
   chainId?: string;
   indexerLookbackBlocks?: number;
+  operatorAddress?: string;
   operatorPrivateKey?: string;
   passportAddress?: string;
   progressAddress?: string;
@@ -68,6 +69,7 @@ export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     chain: {
       chainId: env.RITUAL_CHAIN_ID,
       indexerLookbackBlocks: Number(env.RITUAL_INDEXER_LOOKBACK_BLOCKS ?? 100_000),
+      operatorAddress: env.BACKEND_OPERATOR_ADDRESS,
       operatorPrivateKey: env.BACKEND_OPERATOR_PRIVATE_KEY,
       passportAddress: env.PASSPORT_NFT_ADDRESS,
       progressAddress: env.PROGRESS_MANAGER_ADDRESS,

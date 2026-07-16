@@ -171,13 +171,21 @@ export async function mintPassportOnChain(
     await switchChainIfNeeded(wallet, config.chainId);
   }
 
+  // Ritual chain only accepts EIP-1559 (type 2) transactions. Leaving gas
+  // fields unset lets some wallets default to a legacy gasPrice-style
+  // transaction on unfamiliar chains, which the RPC then rejects outright
+  // with "transaction type not supported" — so fetch live fee data and set
+  // maxFeePerGas/maxPriorityFeePerGas explicitly instead of gasPrice.
+  const fees = await getEip1559Fees(wallet);
+
   const txHash = await wallet.provider.request({
     method: "eth_sendTransaction",
     params: [
       {
         from: address,
         to: config.passportAddress,
-        data: encodeMintPassportCall(classId)
+        data: encodeMintPassportCall(classId),
+        ...fees
       }
     ]
   });
@@ -188,6 +196,30 @@ export async function mintPassportOnChain(
 
   await waitForTransactionReceipt(wallet, txHash);
   return txHash;
+}
+
+async function getEip1559Fees(wallet: BrowserWallet): Promise<{ maxFeePerGas: string; maxPriorityFeePerGas: string } | Record<string, never>> {
+  try {
+    const [priorityFeeHex, block] = await Promise.all([
+      wallet.provider.request({ method: "eth_maxPriorityFeePerGas" }) as Promise<string>,
+      wallet.provider.request({ method: "eth_getBlockByNumber", params: ["latest", false] }) as Promise<{ baseFeePerGas?: string }>
+    ]);
+
+    const baseFeePerGas = block?.baseFeePerGas ? BigInt(block.baseFeePerGas) : null;
+    if (baseFeePerGas === null) return {};
+
+    const maxPriorityFeePerGas = BigInt(priorityFeeHex);
+    const maxFeePerGas = baseFeePerGas * 2n + maxPriorityFeePerGas;
+
+    return {
+      maxFeePerGas: `0x${maxFeePerGas.toString(16)}`,
+      maxPriorityFeePerGas: `0x${maxPriorityFeePerGas.toString(16)}`
+    };
+  } catch {
+    // If the chain doesn't support EIP-1559 fee queries, fall back to
+    // leaving gas fields unset and let the wallet decide as before.
+    return {};
+  }
 }
 
 async function switchChainIfNeeded(wallet: BrowserWallet, decimalOrHexChainId: string) {
