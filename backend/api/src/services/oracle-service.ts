@@ -177,7 +177,7 @@ function buildSystemPrompt(
     "",
     "How to respond:",
     "- Answer what they actually asked. Don't pivot to quest recommendations unless they're asking for direction.",
-    "- Keep it to 2–4 sentences unless they ask for more.",
+    "- Match your length to the question, not a fixed rule. A greeting, a quick check-in, or a simple factual question gets a couple of sentences — don't pad it. A real 'explain X' / 'how does X work' / 'what's the difference between X and Y' question deserves a genuine, complete answer, even a few short paragraphs — don't truncate real explanation just to sound punchy. Use judgment: match depth to what they're actually asking for.",
     "- If recommending a quest, name it and say why it fits this specific builder — not a generic pitch.",
     "- If they sound frustrated or stuck, acknowledge it before helping.",
     "- Never say 'As an AI' or anything that breaks character.",
@@ -212,8 +212,23 @@ function renderKnowledgeSummary(knowledge: OracleKnowledgeBundle): string[] {
     lines.push(`  Evolution stages (${data.evolutionStages.length} total): ${data.evolutionStages.map((s) => s.name).join(" → ")}`);
   }
 
+  const docs = knowledge.sources.find((s) => s.id === "ritual-docs-corpus");
+  if (docs?.data) {
+    const data = docs.data as {
+      whatItIs: string;
+      precompiles: { summary: string; think: string[]; act: string[]; remember: string[]; prove: string[]; keepSecrets: string[] };
+      autonomousAgents: { sevenProperties: string[]; persistenceModels: string };
+      glossary: Record<string, string>;
+    };
+    lines.push(`  What Ritual is: ${data.whatItIs}`);
+    lines.push(`  Precompiles — ${data.precompiles.summary} Think: ${data.precompiles.think.join(" | ")}`);
+    lines.push(`  Precompiles — Act: ${data.precompiles.act.join(", ")}. Remember: ${data.precompiles.remember.join(", ")}. Prove: ${data.precompiles.prove.join(", ")}. Keep Secrets: ${data.precompiles.keepSecrets.join(", ")}.`);
+    lines.push(`  Autonomous agents need all seven properties: ${data.autonomousAgents.sevenProperties.join(", ")}. ${data.autonomousAgents.persistenceModels}`);
+    lines.push(`  Glossary: ${Object.entries(data.glossary).map(([term, def]) => `${term} = ${def}`).join(" | ")}`);
+  }
+
   for (const source of knowledge.sources) {
-    if (source.id === "ritual-basics") continue;
+    if (source.id === "ritual-basics" || source.id === "ritual-docs-corpus") continue;
     if (source.id === "ritual-quest-catalog" || source.id === "verified-ritual-products" || source.freshness === "live") {
       lines.push(`  ${source.label}: ${source.summary}`);
     }
@@ -480,7 +495,7 @@ export class OracleService {
     const completion = await client.chat.completions.create({
       model: input.model,
       messages,
-      max_tokens: 512
+      max_tokens: 1024
     });
 
     const text = completion.choices[0]?.message?.content?.trim();
@@ -498,7 +513,7 @@ export class OracleService {
     const client = new Anthropic({ apiKey: this.config.apiKey });
     const response = await client.messages.create({
       model: this.config.model ?? "claude-opus-4-8",
-      max_tokens: 512,
+      max_tokens: 1024,
       system: systemPrompt,
       messages: [
         ...history.map((msg) => ({

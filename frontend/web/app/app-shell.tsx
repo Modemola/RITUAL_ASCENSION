@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AlertTriangle, Award, Bot, ChevronDown, CircleGauge, LayoutDashboard, ListChecks, RefreshCw, ShieldCheck, Trophy, Wallet } from "lucide-react";
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { appProgress, demoPassport } from "@/lib/data";
 import { useRitual } from "@/lib/store";
 import { apiClient } from "@/lib/api";
@@ -24,6 +24,7 @@ const privateNavItems = [
 export function AppShell({ children }: { children: ReactNode }) {
   const { wallet, isConnected, passport, connectWallet, disconnectWallet } = useRitual();
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const walletMenuRef = useRef<HTMLDivElement>(null);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [connectWallets, setConnectWallets] = useState<BrowserWallet[]>([]);
   const [connectScanning, setConnectScanning] = useState(false);
@@ -32,6 +33,28 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasPrivateAccess = isConnected && Boolean(passport);
   const isAdmin = isConnected && wallet?.toLowerCase() === ADMIN_WALLET;
   const navItems = hasPrivateAccess ? privateNavItems : [];
+
+  // Close the wallet menu on outside click or Escape so it never lingers
+  // open over the rest of the navbar while the user interacts elsewhere.
+  useEffect(() => {
+    if (!walletMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (walletMenuRef.current && !walletMenuRef.current.contains(event.target as Node)) {
+        setWalletMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setWalletMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [walletMenuOpen]);
 
   const openConnectModal = async () => {
     setConnectError("");
@@ -128,7 +151,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             )}
             {isConnected && wallet ? (
-              <div className="relative">
+              <div className="relative" ref={walletMenuRef}>
                 <button
                   type="button"
                   onClick={() => setWalletMenuOpen((open) => !open)}
@@ -139,7 +162,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <ChevronDown className="size-4" />
                 </button>
                 {walletMenuOpen ? (
-                  <div className="rune-panel absolute right-0 mt-2 w-56 p-2 shadow-rune">
+                  <div className="rune-panel absolute right-0 top-full z-50 mt-3 w-56 p-2 shadow-rune">
                     <p className="break-all px-3 py-2 font-mono text-xs text-muted">{wallet}</p>
                     <button
                       type="button"

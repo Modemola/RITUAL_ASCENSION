@@ -49,6 +49,11 @@ export interface OracleKnowledgeConfig {
     apiKey?: string;
     endpoint?: string;
   };
+  xSearch?: {
+    apiKey?: string;
+    handles?: string[];
+    model?: string;
+  };
 }
 
 export interface VerificationConfig {
@@ -97,6 +102,11 @@ export function getApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
         indexer: {
           apiKey: env.ORACLE_INDEXER_API_KEY ?? env.RITUAL_TESTNET_INDEXER_API_KEY,
           endpoint: env.ORACLE_INDEXER_ENDPOINT
+        },
+        xSearch: {
+          apiKey: env.GROK_API_KEY,
+          handles: parseList(env.RITUAL_X_HANDLES, []),
+          model: env.GROK_MODEL ?? "grok-4.5"
         }
       },
       model: env.ORACLE_MODEL ?? "gemini-2.0-flash",

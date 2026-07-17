@@ -13,7 +13,7 @@ import type { ChainConfig, OracleKnowledgeConfig } from "../config.js";
 export interface OracleKnowledgeSource {
   id: string;
   label: string;
-  kind: "ritual_docs" | "chain" | "discord" | "passport" | "quests" | "products" | "indexer";
+  kind: "ritual_docs" | "chain" | "discord" | "passport" | "quests" | "products" | "indexer" | "social";
   freshness: "static" | "live" | "demo" | "unconfigured";
   summary: string;
   data?: unknown;
@@ -51,6 +51,7 @@ export class OracleKnowledgeService {
     const unavailable: string[] = [];
     const sources: OracleKnowledgeSource[] = [
       buildRitualBasicsSource(this.chain),
+      buildRitualDocsCorpusSource(),
       buildQuestSource(),
       buildProductsSource()
     ];
@@ -73,7 +74,8 @@ export class OracleKnowledgeService {
     const optionalRequests = await Promise.allSettled([
       this.fetchDocsKnowledge(input.message),
       this.fetchDiscordKnowledge(input.message, input.identityLink),
-      this.fetchIndexerKnowledge(input.wallet)
+      this.fetchIndexerKnowledge(input.wallet),
+      this.fetchXSearchKnowledge(input.message)
     ]);
 
     for (const result of optionalRequests) {
@@ -178,6 +180,83 @@ export class OracleKnowledgeService {
       })
     };
   }
+
+  private async fetchXSearchKnowledge(message: string) {
+    const xSearch = this.config.xSearch;
+    if (!xSearch?.apiKey || !xSearch.handles?.length) {
+      return { unavailable: "Grok X Search is not configured (GROK_API_KEY / RITUAL_X_HANDLES)." };
+    }
+
+    const response = await fetch("https://api.x.ai/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${xSearch.apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: xSearch.model ?? "grok-4.5",
+        input: [
+          {
+            role: "user",
+            content: `Summarize the most relevant recent posts from ${xSearch.handles.join(", ")} on X for this question: ${message || "recent Ritual updates"}`
+          }
+        ],
+        tools: [{ type: "x_search", allowed_x_handles: xSearch.handles }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Grok X Search returned HTTP ${response.status}`);
+    }
+
+    const data = await response.json() as GrokResponsesPayload;
+    const text = extractGrokResponseText(data);
+    if (!text) throw new Error("Grok X Search returned no usable text");
+
+    return {
+      source: {
+        id: "ritual-x-search-live",
+        label: `Ritual X (@${xSearch.handles.join(", @")})`,
+        kind: "social" as const,
+        freshness: "live" as const,
+        summary: text,
+        data: { citations: data.citations ?? extractGrokCitations(data) }
+      }
+    };
+  }
+}
+
+interface GrokResponsesPayload {
+  output_text?: string;
+  citations?: unknown;
+  output?: Array<{
+    type?: string;
+    content?: Array<{ type?: string; text?: string }>;
+  }>;
+}
+
+// The exact xAI Responses API shape isn't fully pinned down from docs alone —
+// this defensively checks the documented output_text convenience field first,
+// then falls back to walking output[].content[] the way OpenAI's Responses
+// API (which xAI's is modeled on) structures message output.
+function extractGrokResponseText(data: GrokResponsesPayload): string | null {
+  if (typeof data.output_text === "string" && data.output_text.trim()) {
+    return data.output_text.trim();
+  }
+
+  for (const item of data.output ?? []) {
+    for (const content of item.content ?? []) {
+      if (typeof content.text === "string" && content.text.trim()) {
+        return content.text.trim();
+      }
+    }
+  }
+
+  return null;
+}
+
+function extractGrokCitations(data: GrokResponsesPayload): unknown {
+  return data.output?.flatMap((item) => item.content ?? []) ?? [];
 }
 
 interface KnowledgeHttpResponse {
@@ -219,6 +298,56 @@ function buildRitualBasicsSource(chain: ChainConfig): OracleKnowledgeSource {
       },
       evolutionStages,
       builderClasses
+    }
+  };
+}
+
+// Curated from docs.ritualfoundation.org — condensed on purpose so every
+// Oracle request doesn't carry the full site. Update this if the docs change.
+function buildRitualDocsCorpusSource(): OracleKnowledgeSource {
+  return {
+    id: "ritual-docs-corpus",
+    label: "Ritual Chain documentation",
+    kind: "ritual_docs",
+    freshness: "static",
+    summary: "Curated facts from the official Ritual Chain docs — what the chain is, network details, precompiles, and autonomous agents.",
+    data: {
+      whatItIs:
+        "Ritual Chain bills itself as \"the first blockchain where smart contracts can think, see, hear, and act\" — a chain built as a hub for autonomous agents, with AI capabilities enshrined at the protocol layer (built into the chain itself, not bolted on via external smart contracts or oracles).",
+      network: {
+        chainId: 1979,
+        currency: "RITUAL (18 decimals, testnet)",
+        blockTime: "~350ms",
+        rpc: "rpc.ritualfoundation.org",
+        explorer: "explorer.ritualfoundation.org",
+        faucet: "faucet.ritualfoundation.org"
+      },
+      precompiles: {
+        summary: "Seven capability groups, sixteen precompiles total.",
+        think: [
+          "LLM Inference (0x0802) — runs an open-weight model (GLM-4.7-FP8, 64K context) inside a TEE; no external API key needed since the model is self-hosted. This is what the app's \"Call the Ritual LLM Precompile\" quest calls.",
+          "Classical Models / ONNX (0x0800) — runs ML models inline in the node's native runtime, same execution surface as a built-in like ecrecover.",
+          "FHE Inference (0x0807) — processes CKKS-encrypted tensors inside a TEE; inputs and outputs stay ciphertext throughout."
+        ],
+        act: ["Sovereign Agent", "Persistent Agent", "HTTP", "Long-Running HTTP"],
+        remember: ["DKMS (deterministic secp256k1 keypairs derived inside a TEE)", "Scheduler"],
+        prove: ["Ed25519", "Passkeys", "P-256", "ZK Proofs (0x0806 — off-chain prover inside a TEE)"],
+        keepSecrets: ["Secrets / ECIES", "X402 Payments"]
+      },
+      autonomousAgents: {
+        sevenProperties: [
+          "Immortal", "Emancipated", "Teleportable", "Financially sovereign",
+          "Web2-interoperable", "Private", "Computationally sovereign"
+        ],
+        persistenceModels:
+          "Sovereign agents use the Scheduler to wake themselves up at regular intervals. Persistent agents use heartbeats — if one is missed, the chain triggers automatic revival, restoring the agent's container from its data-availability checkpoint."
+      },
+      glossary: {
+        Enshrined: "Implemented at the protocol layer of the chain, not via external smart contracts or oracles.",
+        Superposition: "Ritual Chain running replicated (deterministic EVM) and delegated (TEE) execution over the same state.",
+        "TEE-EOVMT": "Trusted Execution Environment, EVM with Off-chain Verifiable Machine Tasks.",
+        "Sender lock": "One pending async job per EOA at a time — concurrent async precompile calls in the same transaction are not allowed."
+      }
     }
   };
 }
