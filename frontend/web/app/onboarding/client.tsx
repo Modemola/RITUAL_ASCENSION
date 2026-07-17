@@ -21,6 +21,7 @@ import { LoadingSpinner, Modal, Toast } from "@/lib/components";
 import {
   BrowserWallet,
   discoverBrowserWallets,
+  findConnectedBrowserWallet,
   isChainMintConfigured,
   mintPassportOnChain,
   requestMintSignature,
@@ -110,23 +111,25 @@ export const OnboardingClient = () => {
       return;
     }
 
-    // Re-discover if the browser wallet state was lost (e.g. page refresh after session restore)
+    // Re-discover if the browser wallet state was lost (e.g. page refresh after session restore).
+    // With multiple wallet extensions installed, find the one actually authorized
+    // for this session's address instead of guessing the first one announced.
     let browserWallet = connectedBrowserWallet;
     if (!browserWallet) {
       const found = await discoverBrowserWallets();
-      browserWallet = found[0] ?? null;
+      browserWallet = await findConnectedBrowserWallet(found, wallet);
       if (browserWallet) setConnectedBrowserWallet(browserWallet);
     }
 
     if (!browserWallet) {
-      setMintError("No wallet extension found. Unlock MetaMask or another EVM wallet and try again.");
+      setMintError(`No wallet extension is currently authorized for ${shortWallet(wallet)}. Reconnect your wallet and try again.`);
       return;
     }
 
     try {
       const activeWallet = await requestWalletAddress(browserWallet);
       if (activeWallet.toLowerCase() !== wallet.toLowerCase()) {
-        throw new Error(`MetaMask is using ${shortWallet(activeWallet)}. Switch to ${shortWallet(wallet)} and try again.`);
+        throw new Error(`${browserWallet.name} is using ${shortWallet(activeWallet)}. Switch to ${shortWallet(wallet)} in ${browserWallet.name} and try again.`);
       }
 
       if (chainMintEnabled) {

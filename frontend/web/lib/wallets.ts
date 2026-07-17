@@ -100,6 +100,32 @@ export async function requestWalletAddress(wallet: BrowserWallet): Promise<strin
   return accounts[0];
 }
 
+// With multiple wallet extensions installed, picking discoverBrowserWallets()[0]
+// silently swaps to whichever extension happens to announce first — not
+// necessarily the one the session's wallet address actually belongs to. This
+// finds the specific already-authorized wallet for that address using
+// eth_accounts, which never prompts (unlike eth_requestAccounts), so probing
+// every installed wallet doesn't pop up a connection dialog for each one.
+export async function findConnectedBrowserWallet(
+  wallets: BrowserWallet[],
+  targetAddress: string
+): Promise<BrowserWallet | null> {
+  const normalizedTarget = targetAddress.toLowerCase();
+
+  for (const candidate of wallets) {
+    try {
+      const accounts = await candidate.provider.request({ method: "eth_accounts" });
+      if (Array.isArray(accounts) && accounts.some((a) => typeof a === "string" && a.toLowerCase() === normalizedTarget)) {
+        return candidate;
+      }
+    } catch {
+      // Some providers reject eth_accounts if never connected — skip and keep looking.
+    }
+  }
+
+  return null;
+}
+
 export async function requestWalletSignature(wallet: BrowserWallet, address: string, message: string): Promise<string> {
   const signature = await wallet.provider.request({
     method: "personal_sign",
