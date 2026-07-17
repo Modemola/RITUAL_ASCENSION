@@ -185,6 +185,7 @@ export async function mintPassportOnChain(
         from: address,
         to: config.passportAddress,
         data: encodeMintPassportCall(classId),
+        type: "0x2",
         ...fees
       }
     ]
@@ -198,7 +199,17 @@ export async function mintPassportOnChain(
   return txHash;
 }
 
-async function getEip1559Fees(wallet: BrowserWallet): Promise<{ maxFeePerGas: string; maxPriorityFeePerGas: string } | Record<string, never>> {
+// Conservative EIP-1559 fallback if the live fee query fails or the wallet
+// doesn't proxy eth_maxPriorityFeePerGas/eth_getBlockByNumber correctly for
+// an unfamiliar chain. Ritual's real network fees observed at time of
+// writing are well under 1 gwei, so this leaves generous headroom while
+// still guaranteeing we always send maxFeePerGas/maxPriorityTFeePerGas —
+// never gasPrice, and never nothing — so the wallet can't fall back to a
+// legacy-style transaction that this chain's RPC rejects.
+const FALLBACK_MAX_PRIORITY_FEE_PER_GAS = 2_000_000_000n; // 2 gwei
+const FALLBACK_MAX_FEE_PER_GAS = 10_000_000_000n; // 10 gwei
+
+async function getEip1559Fees(wallet: BrowserWallet): Promise<{ maxFeePerGas: string; maxPriorityFeePerGas: string }> {
   try {
     const [priorityFeeHex, block] = await Promise.all([
       wallet.provider.request({ method: "eth_maxPriorityFeePerGas" }) as Promise<string>,
@@ -206,21 +217,29 @@ async function getEip1559Fees(wallet: BrowserWallet): Promise<{ maxFeePerGas: st
     ]);
 
     const baseFeePerGas = block?.baseFeePerGas ? BigInt(block.baseFeePerGas) : null;
-    if (baseFeePerGas === null) return {};
-
     const maxPriorityFeePerGas = BigInt(priorityFeeHex);
+    if (baseFeePerGas === null || maxPriorityFeePerGas <= 0n) {
+      throw new Error("Chain did not return usable EIP-1559 fee data");
+    }
+
     const maxFeePerGas = baseFeePerGas * 2n + maxPriorityFeePerGas;
 
     return {
       maxFeePerGas: `0x${maxFeePerGas.toString(16)}`,
       maxPriorityFeePerGas: `0x${maxPriorityFeePerGas.toString(16)}`
     };
-  } catch {
-    // If the chain doesn't support EIP-1559 fee queries, fall back to
-    // leaving gas fields unset and let the wallet decide as before.
-    return {};
+  } catch (error) {
+    console.warn("Falling back to a fixed EIP-1559 fee for the mint transaction:", error);
+    return {
+      maxFeePerGas: `0x${FALLBACK_MAX_FEE_PER_GAS.toString(16)}`,
+      maxPriorityFeePerGas: `0x${FALLBACK_MAX_PRIORITY_FEE_PER_GAS.toString(16)}`
+    };
   }
 }
+
+// Public RPC endpoint, safe to ship client-side (no key). Mirrors RITUAL_RPC_URL
+// on the backend — update both if the RPC endpoint ever changes.
+const RITUAL_PUBLIC_RPC_URL = "https://rpc.ritualfoundation.org/";
 
 async function switchChainIfNeeded(wallet: BrowserWallet, decimalOrHexChainId: string) {
   const targetChainId = toHexChainId(decimalOrHexChainId);
@@ -228,6 +247,29 @@ async function switchChainIfNeeded(wallet: BrowserWallet, decimalOrHexChainId: s
 
   if (typeof currentChainId === "string" && currentChainId.toLowerCase() === targetChainId.toLowerCase()) {
     return;
+  }
+
+  // wallet_addEthereumChain registers full chain metadata with the wallet —
+  // for wallets that only have a bare-minimum profile for this chain (added
+  // manually by the user with no metadata), this gives them enough to build
+  // a correct transaction instead of falling back to legacy format. If the
+  // wallet already knows this chain, most implementations just switch.
+  try {
+    await wallet.provider.request({
+      method: "wallet_addEthereumChain",
+      params: [
+        {
+          chainId: targetChainId,
+          chainName: "Ritual Chain",
+          nativeCurrency: { name: "Ritual", symbol: "RITUAL", decimals: 18 },
+          rpcUrls: [RITUAL_PUBLIC_RPC_URL]
+        }
+      ]
+    });
+    return;
+  } catch {
+    // Fall through to a plain switch — some wallets reject re-adding an
+    // already-known chain rather than treating it as a no-op.
   }
 
   await wallet.provider.request({
