@@ -1,13 +1,13 @@
 "use client";
 
-import { GraduationCap, Sparkles, Target } from "lucide-react";
+import { GraduationCap, Star, Target } from "lucide-react";
 import { useState } from "react";
 import type { MascotId } from "@/lib/data";
 import { mascots } from "@/lib/data";
 
-const MASCOT_ICONS: Record<MascotId, typeof Sparkles> = {
+const MASCOT_ICONS: Record<MascotId, typeof Star> = {
   siggy: GraduationCap,
-  ploplo: Sparkles,
+  ploplo: Star,
   initiate: Target
 };
 

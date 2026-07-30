@@ -4,11 +4,11 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowLeft,
+  Award,
   BadgeCheck,
   Check,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
   Wallet
 } from "lucide-react";
 import { useState } from "react";
@@ -264,7 +264,7 @@ export const OnboardingClient = () => {
                 </div>
                 <p className="mt-3 min-h-20 text-sm leading-6 text-muted">{builderClass.focus}</p>
                 <div className="mt-4 flex items-center gap-2 border-t border-cyan/10 pt-3 text-sm font-medium text-cyan">
-                  <Sparkles className="size-4 shrink-0" />
+                  <Award className="size-4 shrink-0" />
                   <span>{builderClass.achievement}</span>
                 </div>
               </article>

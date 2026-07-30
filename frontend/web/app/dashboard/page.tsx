@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Activity, BadgeCheck, Bot, ChevronRight, Flame, Hexagon, MessageCircle, Shield, Sparkles, Wallet } from "lucide-react";
+import { Activity, BadgeCheck, Bot, ChevronRight, Flame, Hexagon, MessageCircle, Shield, Wallet } from "lucide-react";
 import { appClass, appProgress, appReputation, appTier, demoIdentityLink, demoPassport, evolutionStages, getTier, quests as staticQuests } from "@/lib/data";
 import { apiClient, ActivityFeedItem } from "@/lib/api";
 import type { Quest } from "@ritual/domain";
@@ -207,7 +207,7 @@ export default function DashboardPage() {
 
           <div className="rune-panel p-5 fade-in-delay-3 hover-glow">
             <div className="flex items-center gap-2">
-              <Sparkles className="size-5 text-cyan" />
+              <Activity className="size-5 text-cyan" />
               <h2 className="section-title text-xl font-semibold">Recent activity</h2>
             </div>
             <div className="mt-4 grid gap-3 font-mono text-sm">

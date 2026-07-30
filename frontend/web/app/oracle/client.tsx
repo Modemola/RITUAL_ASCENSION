@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, RotateCcw, Send, Sparkles, Users } from "lucide-react";
+import { AlertCircle, Eye, RotateCcw, Send, Users } from "lucide-react";
 import { useRitual } from "@/lib/store";
 import { useAsync, useForm } from "@/lib/hooks";
 import { apiClient } from "@/lib/api";
@@ -139,7 +139,7 @@ export const OracleClient = () => {
             <MascotAvatar mascotId={mascot.id} size="md" />
           ) : (
             <span className="grid size-11 shrink-0 place-items-center rounded-full border border-purple/40 bg-purple/10 text-purple shadow-purple">
-              <Sparkles className="size-5" />
+              <Eye className="size-5" />
             </span>
           )}
           <div className="min-w-0">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Bot, CircleGauge, ExternalLink, HelpCircle, ShieldCheck, Sparkles, Trophy, Wallet } from "lucide-react";
+import { ArrowRight, BadgeCheck, Bot, CircleGauge, ExternalLink, HelpCircle, ShieldCheck, Trophy, Wallet, Zap } from "lucide-react";
 import { appProgress, appReputation, appTier, builderClasses, evolutionStages, leaderboard, quests, verifiedRitualProducts } from "@/lib/data";
 
 const features = [
@@ -24,7 +24,7 @@ export default function LandingPage() {
         <div className="relative z-10 mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_0.92fr] lg:items-center">
           <div className="space-y-8 fade-in">
             <div className="eyebrow shine-line fade-in-delay-1">
-              <Sparkles className="size-3.5" />
+              <Zap className="size-3.5" />
               Ascension Ritual Online
             </div>
             <div className="space-y-6 slide-up-delay">
